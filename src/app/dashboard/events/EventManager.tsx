@@ -1,19 +1,44 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { createEvent, updateEvent, deleteEvent } from "../../actions/community";
+import { createEvent, updateEvent, deleteEvent, updateEventStatus } from "../../actions/community";
+import CustomSelect from "../../../components/ui/CustomSelect";
+import CustomDateInput from "../../../components/ui/CustomDateInput";
+import CustomTimeInput from "../../../components/ui/CustomTimeInput";
+import { useToast } from "../../../components/ui/Toast";
+import { formatDateID } from "../../../lib/utils";
+import { Plus, Edit3, Trash2, Save, X, ChevronDown, Calendar, Clock, Info } from "lucide-react";
 
 export default function EventManager({ initialEvents }: { initialEvents: any[] }) {
   const [isPending, startTransition] = useTransition();
-  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const { addToast } = useToast();
   
-  // State untuk Mode Form
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [formStep, setFormStep] = useState<1 | 2 | 3>(1);
   const [timeMode, setTimeMode] = useState("exact_time");
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const formRef = useRef<HTMLDivElement>(null);
+
+  // --- Opsi Dropdown ---
+  const categoryOptions = [
+    { label: "Kajian Rutin", value: "kajian_rutin" }, { label: "Tabligh Akbar", value: "tabligh_akbar" },
+    { label: "Rapat Pengurus", value: "rapat_pengurus" }, { label: "Kegiatan Sosial", value: "kegiatan_sosial" },
+    { label: "Peringatan Hari Besar", value: "phbi" }, { label: "Pelatihan", value: "pelatihan" }, { label: "Lainnya", value: "lainnya" }
+  ];
+  const audienceOptions = [
+    { label: "Umum", value: "umum" }, { label: "Pria (Ikhwan)", value: "pria" }, { label: "Wanita (Akhwat)", value: "wanita" },
+    { label: "Remaja", value: "remaja" }, { label: "Anak-anak", value: "anak" }, { label: "Internal Pengurus", value: "pengurus" }
+  ];
+  const afterPrayerOptions = [
+    { label: "Subuh", value: "subuh" }, { label: "Dzuhur", value: "dzuhur" }, { label: "Ashar", value: "ashar" },
+    { label: "Maghrib", value: "maghrib" }, { label: "Isya", value: "isya" }
+  ];
+  const statusOptions = [
+    { label: "Akan Datang", value: "upcoming" }, { label: "Sedang Berlangsung", value: "ongoing" },
+    { label: "Selesai", value: "finished" }, { label: "Dibatalkan", value: "cancelled" }
+  ];
 
   // --- Handlers ---
   const handleEditClick = (evt: any) => {
@@ -21,16 +46,8 @@ export default function EventManager({ initialEvents }: { initialEvents: any[] }
     setTimeMode(evt.time_mode || "exact_time");
     setIsFormVisible(true);
     setFormStep(1);
-    setMessage(null);
-    // Scroll mulus ke area form
+    setValidationErrors({});
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingEvent(null);
-    setIsFormVisible(false);
-    setFormStep(1);
-    setMessage(null);
   };
 
   const handleAddNewClick = () => {
@@ -38,18 +55,61 @@ export default function EventManager({ initialEvents }: { initialEvents: any[] }
     setTimeMode("exact_time");
     setIsFormVisible(true);
     setFormStep(1);
-    setMessage(null);
+    setValidationErrors({});
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingEvent(null);
+    setIsFormVisible(false);
+    setFormStep(1);
+    setValidationErrors({});
   };
 
   const handleDelete = (id: number, title: string) => {
     if (!window.confirm(`Yakin ingin menghapus event "${title}"?`)) return;
     startTransition(async () => {
-      setMessage(null);
       const res = await deleteEvent(id);
-      if (res.error) setMessage({ text: res.error, type: "error" });
-      else setMessage({ text: "Berhasil menghapus event.", type: "success" });
+      if (res.error) addToast(res.error, "error");
+      else addToast(`Acara ${title} berhasil dihapus.`, "success");
     });
+  };
+
+  // Quick Action: Ubah Status Langsung dari Tabel
+  const handleQuickStatusChange = (id: number, newStatus: string, title: string) => {
+    startTransition(async () => {
+      const res = await updateEventStatus(id, newStatus);
+      if (res.error) addToast("Gagal memperbarui status acara", "error");
+      else addToast(`Status "${title}" diperbarui!`, "success");
+    });
+  };
+
+  const validateStep1 = () => {
+    const form = document.getElementById("eventForm") as HTMLFormElement;
+    const formData = new FormData(form);
+    const title = formData.get("title") as string;
+    if (!title || !title.trim()) {
+      setValidationErrors({ title: "Judul kegiatan wajib diisi." });
+      addToast("Mohon lengkapi judul kegiatan.", "error");
+      return false;
+    }
+    setValidationErrors({});
+    setFormStep(2);
+    return true;
+  };
+
+  const validateStep2 = () => {
+    const form = document.getElementById("eventForm") as HTMLFormElement;
+    const formData = new FormData(form);
+    const startDate = formData.get("start_date") as string;
+    if (!startDate || !startDate.trim()) {
+      setValidationErrors({ start_date: "Tanggal mulai acara wajib dipilih." });
+      addToast("Mohon pilih tanggal kegiatan.", "error");
+      return false;
+    }
+    setValidationErrors({});
+    setFormStep(3);
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -83,16 +143,15 @@ export default function EventManager({ initialEvents }: { initialEvents: any[] }
     submitData.append("payload", JSON.stringify(payload));
 
     startTransition(async () => {
-      setMessage(null);
       const res = editingEvent ? await updateEvent(submitData) : await createEvent(submitData);
       
       if (res.error) {
-        setMessage({ text: res.error, type: "error" });
+        addToast(res.error, "error");
       } else {
-        setMessage({ text: `Berhasil ${editingEvent ? "memperbarui" : "menambah"} event.`, type: "success" });
+        addToast(`Berhasil ${editingEvent ? "memperbarui" : "menyimpan"} acara.`, "success");
         setIsFormVisible(false);
         setEditingEvent(null);
-        window.scrollTo({ top: 0, behavior: "smooth" }); // Kembali ke atas setelah sukses
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     });
   };
@@ -101,65 +160,70 @@ export default function EventManager({ initialEvents }: { initialEvents: any[] }
     <div className="space-y-8">
       
       {/* 1. BAGIAN DAFTAR EVENT (Tabel Utama) */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-        <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-          <h3 className="font-semibold text-gray-800">Daftar Event Terdaftar</h3>
-          <button 
-            onClick={handleAddNewClick}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            Tambah Event Baru
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+        <div className="px-5 py-5 border-b border-gray-100 bg-white flex justify-between items-center">
+          <div>
+            <h3 className="font-bold text-gray-800">Daftar Event & Acara</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Kelola seluruh publikasi kegiatan masjid.</p>
+          </div>
+          <button onClick={handleAddNewClick} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 px-5 rounded-lg transition-colors flex items-center gap-2 shadow-sm active:scale-95">
+            <Plus className="w-4 h-4" /> Tambah Event
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* pb-32 ditambahkan agar CustomSelect dropdown punya ruang untuk terbuka tanpa terpotong table overflow */}
+        <div className="overflow-x-auto pb-32">
           <table className="w-full text-left border-collapse text-sm">
-            <thead className="bg-white text-gray-500 border-b border-gray-200">
+            <thead className="bg-gray-50/80 text-gray-500 border-b border-gray-100">
               <tr>
-                <th className="px-5 py-3 font-medium">Judul Event</th>
-                <th className="px-5 py-3 font-medium">Kategori & Audiens</th>
-                <th className="px-5 py-3 font-medium">Pelaksanaan</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium text-right">Aksi</th>
+                <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px]">Judul Event</th>
+                <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px]">Kategori & Audiens</th>
+                <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px]">Pelaksanaan</th>
+                <th className="px-5 py-3 font-semibold text-center uppercase tracking-wider text-[11px] w-48">Status Publikasi</th>
+                <th className="px-5 py-3 font-semibold text-right uppercase tracking-wider text-[11px]">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {initialEvents.length === 0 ? (
-                <tr><td colSpan={5} className="px-5 py-10 text-gray-500 text-center bg-gray-50/50">Belum ada event terdaftar. Klik tombol tambah di kanan atas.</td></tr>
+                <tr><td colSpan={5} className="px-5 py-12 text-gray-400 text-center bg-gray-50/30 font-medium">Belum ada event terdaftar.</td></tr>
               ) : (
                 initialEvents.map((evt) => (
-                  <tr key={evt.id} className="hover:bg-blue-50/30 transition-colors group">
+                  <tr key={evt.id} className="hover:bg-emerald-50/30 transition-colors group">
                     <td className="px-5 py-4">
-                      <p className="font-semibold text-gray-900">{evt.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{evt.speaker_name ? `Pemateri: ${evt.speaker_name}` : 'Tanpa Pemateri'}</p>
+                      <p className="font-bold text-gray-900">{evt.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{evt.speaker_name ? `Pemateri: ${evt.speaker_name}` : 'Tanpa Pemateri Khusus'}</p>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="inline-block bg-gray-100 text-gray-700 text-[10px] font-medium px-2 py-0.5 rounded capitalize mr-1 border border-gray-200">
-                        {evt.category.replace('_', ' ')}
-                      </span>
-                      {evt.audience && <span className="inline-block bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded capitalize border border-gray-200">{evt.audience}</span>}
+                      <div className="flex flex-wrap gap-2">
+                        {/* UKURAN BADGE DIPERBESAR (text-xs, py-1.5, px-2.5) */}
+                        <span className="inline-block bg-purple-50 text-purple-700 text-xs font-bold px-2.5 py-1.5 rounded-md capitalize border border-purple-100 shadow-sm">
+                          {evt.category.replace('_', ' ')}
+                        </span>
+                        {evt.audience && <span className="inline-block bg-gray-50 text-gray-600 text-xs font-semibold px-2.5 py-1.5 rounded-md capitalize border border-gray-200 shadow-sm">{evt.audience}</span>}
+                      </div>
                     </td>
                     <td className="px-5 py-4">
-                      <p className="text-gray-900 font-medium">{evt.start_date}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {evt.time_mode === 'exact_time' ? (evt.start_time ? evt.start_time.slice(0,5) : '-') : `Ba'da ${evt.after_prayer || '-'}`}
+                      <p className="text-gray-900 font-bold">{formatDateID(evt.start_date)}</p>
+                      <p className="text-xs text-emerald-700 font-bold mt-1 bg-emerald-50 inline-block px-2 py-1 rounded border border-emerald-100">
+                        {evt.time_mode === 'exact_time' ? (evt.start_time ? `Pukul ${evt.start_time.slice(0,5)}` : '-') : `Ba'da ${evt.after_prayer}`}
                       </p>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`inline-block text-[10px] font-semibold px-2.5 py-1 rounded-full capitalize
-                        ${evt.status === 'upcoming' ? 'bg-yellow-100 text-yellow-800' : 
-                          evt.status === 'ongoing' ? 'bg-green-100 text-green-800' : 
-                          evt.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                          'bg-gray-100 text-gray-800'}`}
-                      >
-                        {evt.status}
-                      </span>
+                      {/* QUICK STATUS MENGGUNAKAN CUSTOM SELECT */}
+                      <div className="w-full min-w-[140px]">
+                        <CustomSelect
+                          name={`status-${evt.id}`}
+                          defaultValue={evt.status}
+                          disabled={isPending}
+                          onChange={(val) => handleQuickStatusChange(evt.id, val, evt.title)}
+                          options={statusOptions}
+                        />
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleEditClick(evt)} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md text-xs font-medium border border-blue-200 transition-colors">Edit</button>
-                        <button onClick={() => handleDelete(evt.id, evt.title)} disabled={isPending} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-xs font-medium border border-red-200 transition-colors disabled:opacity-50">Hapus</button>
+                        <button onClick={() => handleEditClick(evt)} className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-md border border-gray-200 hover:border-emerald-200 transition-colors shadow-sm" title="Edit"><Edit3 className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(evt.id, evt.title)} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -170,160 +234,151 @@ export default function EventManager({ initialEvents }: { initialEvents: any[] }
         </div>
       </div>
 
-      {message && !isFormVisible && (
-        <div className={`p-4 rounded-xl border ${message.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-          {message.text}
-        </div>
-      )}
-
-      {/* 2. BAGIAN FORM STEPPER (Muncul jika isFormVisible true) */}
+      {/* 2. BAGIAN FORM STEPPER */}
       {isFormVisible && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden scroll-mt-6" ref={formRef}>
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-xl overflow-hidden scroll-mt-6 animate-in fade-in slide-in-from-bottom-4" ref={formRef}>
+          
           {/* Header Form */}
-          <div className="bg-gray-900 px-6 py-4 flex justify-between items-center">
+          <div className="bg-emerald-900 px-6 py-4 flex justify-between items-center">
             <div>
               <h3 className="font-bold text-white text-lg">{editingEvent ? "Edit Data Event" : "Tambah Event Baru"}</h3>
-              <p className="text-gray-400 text-xs mt-0.5">{editingEvent ? `ID: #${editingEvent.id} | Mengubah data event yang sudah ada.` : "Lengkapi formulir secara bertahap."}</p>
+              <p className="text-emerald-200 text-xs mt-0.5">{editingEvent ? `ID: #${editingEvent.id} | Mengubah data event yang sudah ada.` : "Lengkapi formulir secara bertahap."}</p>
             </div>
-            <button onClick={handleCancelEdit} className="text-gray-400 hover:text-white transition-colors bg-gray-800 p-2 rounded-full">
-              <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            <button onClick={handleCancelEdit} className="text-emerald-200 hover:text-white transition-colors bg-emerald-800 hover:bg-emerald-700 p-2 rounded-full">
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Stepper Navigator */}
-          <div className="flex border-b border-gray-200 bg-gray-50">
-            {[1, 2, 3].map((step) => (
-              <button 
-                key={step}
-                type="button"
-                onClick={() => setFormStep(step as 1|2|3)}
-                className={`flex-1 py-3 text-sm font-semibold transition-colors border-b-2 ${formStep === step ? "bg-white text-blue-600 border-blue-600" : "text-gray-400 border-transparent hover:text-gray-600"}`}
-              >
-                {step === 1 ? "1. Informasi Dasar" : step === 2 ? "2. Pengaturan Waktu" : "3. Detail & Simpan"}
-              </button>
-            ))}
+          {/* Stepper Navigator Kustom */}
+          <div className="flex bg-gray-50 border-b border-gray-100 relative">
+            {[
+              { step: 1, label: "Informasi Dasar", icon: Info },
+              { step: 2, label: "Pengaturan Waktu", icon: Calendar },
+              { step: 3, label: "Review & Publikasi", icon: Save }
+            ].map((s) => {
+              const isActive = formStep === s.step;
+              const isPassed = formStep > s.step;
+              return (
+                <button 
+                  key={s.step}
+                  type="button"
+                  onClick={() => formStep > s.step && setFormStep(s.step as 1|2|3)} 
+                  className={`flex-1 py-3 px-2 text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-2 transition-colors border-b-2 relative ${
+                    isActive ? "bg-white text-emerald-700 border-emerald-600 shadow-sm z-10" : 
+                    isPassed ? "text-emerald-600 border-transparent hover:bg-emerald-50 cursor-pointer" : 
+                    "text-gray-400 border-transparent cursor-not-allowed"
+                  }`}
+                >
+                  <s.icon className={`w-4 h-4 ${isActive ? "text-emerald-600" : isPassed ? "text-emerald-500" : "text-gray-400"}`} />
+                  <span className="hidden sm:inline">{s.step}. {s.label}</span>
+                  <span className="sm:hidden text-[10px]">Langkah {s.step}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Body Form (Key diubah jika editingEvent berubah, untuk mereset defaultValue) */}
-          <form key={editingEvent ? editingEvent.id : "new-event"} onSubmit={handleSubmit} className="p-6 md:p-8">
+          {/* Form Body - Menggunakan noValidate agar popup HTML mati */}
+          <form id="eventForm" key={editingEvent ? editingEvent.id : "new-event"} onSubmit={handleSubmit} noValidate className="p-6 md:p-8">
             
             {/* STEP 1: INFORMASI DASAR */}
-            <div className={formStep === 1 ? "block space-y-5 animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+            <div className={formStep === 1 ? "block space-y-6 animate-in fade-in slide-in-from-right-4" : "hidden"}>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Judul Event <span className="text-red-500">*</span></label>
-                <input type="text" name="title" defaultValue={editingEvent?.title} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Cth: Tabligh Akbar Menyambut Ramadhan" />
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Judul Kegiatan / Event <span className="text-rose-500">*</span></label>
+                <input type="text" name="title" defaultValue={editingEvent?.title} className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-900 outline-none transition-colors ${validationErrors.title ? "border-rose-300 focus:ring-rose-200" : "border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 shadow-sm"}`} placeholder="Cth: Kajian Tafsir Jalalain..." />
+                {validationErrors.title && <p className="text-rose-500 text-[10px] mt-1.5 font-bold animate-in fade-in">{validationErrors.title}</p>}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Kategori <span className="text-red-500">*</span></label>
-                  <select name="category" defaultValue={editingEvent?.category || "lainnya"} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    <option value="kajian_rutin">Kajian Rutin</option><option value="tabligh_akbar">Tabligh Akbar</option><option value="rapat_pengurus">Rapat Pengurus</option>
-                    <option value="kegiatan_sosial">Kegiatan Sosial</option><option value="phbi">Peringatan Hari Besar (PHBI)</option><option value="pelatihan">Pelatihan</option><option value="lainnya">Lainnya</option>
-                  </select>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Kategori Acara <span className="text-rose-500">*</span></label>
+                  <CustomSelect name="category" defaultValue={editingEvent?.category || "lainnya"} options={categoryOptions} disabled={isPending} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Target Peserta</label>
-                  <select name="audience" defaultValue={editingEvent?.audience || "umum"} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    <option value="umum">Umum</option><option value="pria">Pria (Ikhwan)</option><option value="wanita">Wanita (Akhwat)</option>
-                    <option value="remaja">Remaja</option><option value="anak">Anak-anak</option><option value="pengurus">Internal Pengurus</option>
-                  </select>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Target Jamaah (Audiens)</label>
+                  <CustomSelect name="audience" defaultValue={editingEvent?.audience || "umum"} options={audienceOptions} disabled={isPending} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Nama Pemateri</label>
-                  <input type="text" name="speaker_name" defaultValue={editingEvent?.speaker_name} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Cth: Ustadz Fulan..." />
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Nama Pemateri / Pembicara</label>
+                  <input type="text" name="speaker_name" defaultValue={editingEvent?.speaker_name} disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-sm text-gray-900 outline-none shadow-sm disabled:bg-gray-100" placeholder="Cth: Ustadz Fulan..." />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Penanggung Jawab (PIC)</label>
-                  <input type="text" name="person_in_charge" defaultValue={editingEvent?.person_in_charge} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nama Takmir/Panitia" />
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Penanggung Jawab (Panitia/PIC)</label>
+                  <input type="text" name="person_in_charge" defaultValue={editingEvent?.person_in_charge} disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-sm text-gray-900 outline-none shadow-sm disabled:bg-gray-100" placeholder="Nama Takmir..." />
                 </div>
               </div>
-              <div className="flex justify-end pt-4">
-                <button type="button" onClick={() => setFormStep(2)} className="bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold py-2.5 px-6 rounded-lg transition-colors">Selanjutnya: Atur Waktu &rarr;</button>
+              <div className="flex justify-end pt-4 border-t border-gray-100 mt-6">
+                <button type="button" onClick={validateStep1} disabled={isPending} className="bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white text-sm font-bold py-2.5 px-6 rounded-lg transition-colors flex items-center gap-2">
+                  Selanjutnya <ChevronDown className="w-4 h-4 -rotate-90" />
+                </button>
               </div>
             </div>
 
             {/* STEP 2: PENGATURAN WAKTU */}
-            <div className={formStep === 2 ? "block space-y-5 animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className={formStep === 2 ? "block space-y-6 animate-in fade-in slide-in-from-right-4" : "hidden"}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tanggal Mulai <span className="text-red-500">*</span></label>
-                  <input type="date" name="start_date" defaultValue={editingEvent?.start_date} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tanggal Mulai <span className="text-rose-500">*</span></label>
+                  {validationErrors.start_date && <p className="text-rose-500 text-[10px] mb-1.5 font-bold animate-in fade-in">{validationErrors.start_date}</p>}
+                  <CustomDateInput name="start_date" defaultValue={editingEvent?.start_date} disabled={isPending} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tanggal Selesai (Jika Berbeda)</label>
-                  <input type="date" name="end_date" defaultValue={editingEvent?.end_date} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tanggal Selesai (Opsional)</label>
+                  <CustomDateInput name="end_date" defaultValue={editingEvent?.end_date} disabled={isPending} />
                 </div>
               </div>
               
-              <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mt-4 space-y-4">
+              <div className="p-5 bg-gray-50 border border-gray-200 rounded-xl space-y-5">
                 <div>
-                  <label className="block text-xs font-semibold text-blue-900 mb-1.5">Mode Penetapan Jam <span className="text-red-500">*</span></label>
-                  <select name="time_mode" value={timeMode} onChange={(e) => setTimeMode(e.target.value)} className="w-full md:w-1/2 px-4 py-2.5 rounded-lg border border-blue-200 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    <option value="exact_time">Jam Pasti (Exact Time)</option>
-                    <option value="after_prayer">Terikat Waktu Salat (Ba'da)</option>
-                  </select>
+                  <label className="block text-xs font-bold tracking-widest text-emerald-800 uppercase mb-2">Mode Waktu Pelaksanaan</label>
+                  <div className="w-full md:w-1/2">
+                    <CustomSelect name="time_mode" defaultValue={timeMode} onChange={(val) => setTimeMode(val)} options={[{label: "Jam Pasti (Exact Time)", value: "exact_time"}, {label: "Ba'da Salat Fardhu", value: "after_prayer"}]} disabled={isPending} />
+                  </div>
                 </div>
                 
                 {timeMode === "exact_time" ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-5 animate-in fade-in">
                     <div className="col-span-1">
-                      <label className="block text-[10px] font-semibold text-blue-800 uppercase tracking-wide mb-1">Jam Mulai</label>
-                      <input type="time" name="start_time" defaultValue={editingEvent?.start_time?.slice(0,5)} className="w-full px-3 py-2 rounded-lg border border-blue-200 text-sm text-gray-900 outline-none" />
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1.5 flex items-center gap-1"><Clock className="w-3 h-3"/> Jam Mulai</label>
+                      <CustomTimeInput name="start_time" defaultValue={editingEvent?.start_time?.slice(0,5)} disabled={isPending} />
                     </div>
                     <div className="col-span-1">
-                      <label className="block text-[10px] font-semibold text-blue-800 uppercase tracking-wide mb-1">Jam Selesai</label>
-                      <input type="time" name="end_time" defaultValue={editingEvent?.end_time?.slice(0,5)} className="w-full px-3 py-2 rounded-lg border border-blue-200 text-sm text-gray-900 outline-none" />
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1.5 flex items-center gap-1"><Clock className="w-3 h-3"/> Jam Selesai</label>
+                      <CustomTimeInput name="end_time" defaultValue={editingEvent?.end_time?.slice(0,5)} disabled={isPending} />
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in">
                     <div>
-                      <label className="block text-[10px] font-semibold text-blue-800 uppercase tracking-wide mb-1">Setelah Salat Apa?</label>
-                      <select name="after_prayer" defaultValue={editingEvent?.after_prayer || "maghrib"} className="w-full px-3 py-2 rounded-lg border border-blue-200 text-sm text-gray-900 outline-none bg-white">
-                        <option value="subuh">Subuh</option><option value="dzuhur">Dzuhur</option><option value="ashar">Ashar</option><option value="maghrib">Maghrib</option><option value="isya">Isya</option>
-                      </select>
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1.5 flex items-center gap-1">Setelah Salat Apa?</label>
+                      <CustomSelect name="after_prayer" defaultValue={editingEvent?.after_prayer || "maghrib"} options={afterPrayerOptions} disabled={isPending} />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-blue-800 uppercase tracking-wide mb-1">Jeda Waktu (Menit)</label>
-                      <input type="number" name="after_prayer_offset_min" defaultValue={editingEvent?.after_prayer_offset_min} placeholder="Cth: 0 untuk langsung" className="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm text-gray-900 outline-none" />
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1.5 flex items-center gap-1">Jeda Waktu (Menit)</label>
+                      <input type="number" name="after_prayer_offset_min" defaultValue={editingEvent?.after_prayer_offset_min} disabled={isPending} placeholder="0 untuk langsung" className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-gray-100" />
                     </div>
                   </div>
                 )}
               </div>
-              <div className="flex justify-between pt-4">
-                <button type="button" onClick={() => setFormStep(1)} className="text-gray-500 hover:text-gray-800 text-sm font-semibold py-2.5 px-4 transition-colors">&larr; Kembali</button>
-                <button type="button" onClick={() => setFormStep(3)} className="bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold py-2.5 px-6 rounded-lg transition-colors">Selanjutnya: Review &rarr;</button>
+              <div className="flex justify-between pt-4 border-t border-gray-100 mt-6">
+                <button type="button" onClick={() => setFormStep(1)} disabled={isPending} className="text-gray-500 hover:text-gray-800 text-sm font-bold py-2.5 px-4 transition-colors flex items-center gap-2"><ChevronDown className="w-4 h-4 rotate-90" /> Kembali</button>
+                <button type="button" onClick={validateStep2} disabled={isPending} className="bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white text-sm font-bold py-2.5 px-6 rounded-lg transition-colors flex items-center gap-2">Selanjutnya <ChevronDown className="w-4 h-4 -rotate-90" /></button>
               </div>
             </div>
 
             {/* STEP 3: DESKRIPSI & SUBMIT */}
-            <div className={formStep === 3 ? "block space-y-5 animate-in fade-in slide-in-from-bottom-2" : "hidden"}>
+            <div className={formStep === 3 ? "block space-y-6 animate-in fade-in slide-in-from-right-4" : "hidden"}>
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Deskripsi Publik / Informasi Acara</label>
-                <textarea name="description" defaultValue={editingEvent?.description} rows={3} className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Jelaskan detail acara agar jamaah tertarik hadir..."></textarea>
+                <textarea name="description" defaultValue={editingEvent?.description} rows={4} disabled={isPending} className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-sm text-gray-900 outline-none shadow-sm disabled:bg-gray-100" placeholder="Jelaskan detail acara agar jamaah tertarik hadir..."></textarea>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Catatan Internal (Hanya dilihat Takmir)</label>
-                <textarea name="note_internal" defaultValue={editingEvent?.note_internal} rows={2} className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-yellow-50/50 text-sm text-gray-900 focus:ring-2 focus:ring-yellow-500 outline-none" placeholder="Cth: Konsumsi dipesan ke Bu Tini, kunci ruang dipegang Pak RT..."></textarea>
+              <div className="bg-amber-50 p-5 rounded-xl border border-amber-100">
+                <label className="block text-xs font-bold tracking-widest text-amber-800 uppercase mb-1.5">Catatan Internal (Khusus Takmir)</label>
+                <textarea name="note_internal" defaultValue={editingEvent?.note_internal} rows={2} disabled={isPending} className="w-full px-4 py-3 rounded-lg border border-amber-200 bg-white text-sm text-gray-900 focus:ring-2 focus:ring-amber-200 outline-none shadow-sm disabled:bg-gray-100" placeholder="Cth: Konsumsi dipesan ke Bu Tini, kunci ruang dipegang Pak RT..."></textarea>
               </div>
 
-              {message && (
-                <div className={`p-4 rounded-lg border ${message.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-                  <p className="text-sm font-medium">{message.text}</p>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center pt-6 border-t border-gray-200 mt-6">
-                <button type="button" onClick={() => setFormStep(2)} className="text-gray-500 hover:text-gray-800 text-sm font-semibold py-2.5 px-4 transition-colors">&larr; Pengaturan Waktu</button>
-                <button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-bold py-3 px-8 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2">
-                  {isPending ? (
-                    <>Memproses Data...</>
-                  ) : (
-                    <>
-                      <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                      {editingEvent ? "Simpan Perubahan Event" : "Publikasikan Event Baru"}
-                    </>
-                  )}
+              <div className="flex justify-between items-center pt-6 border-t border-gray-200 mt-8">
+                <button type="button" onClick={() => setFormStep(2)} disabled={isPending} className="text-gray-500 hover:text-gray-800 text-sm font-bold py-2.5 px-4 transition-colors flex items-center gap-2"><ChevronDown className="w-4 h-4 rotate-90" /> Pengaturan Waktu</button>
+                <button type="submit" disabled={isPending} className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-bold py-3 px-8 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2">
+                  {isPending ? "Memproses Data..." : <><Save className="w-5 h-5" /> {editingEvent ? "Simpan Perubahan Event" : "Publikasikan Event Baru"}</>}
                 </button>
               </div>
             </div>
