@@ -1,66 +1,55 @@
-"use client";
+import { cookies } from "next/headers";
+import Navbar from "../components/Navbar";
 
-import { GoogleLogin } from "@react-oauth/google";
-import axios from "axios";
-import { useState } from "react";
-
-export default function Home() {
-  const [status, setStatus] = useState<string>("Menunggu login...");
-  const [backendResponse, setBackendResponse] = useState<any>(null);
-
-  // Fungsi ini dipanggil otomatis oleh Google jika login sukses
-  const handleGoogleSuccess = async (credentialResponse: any) => {
-    setStatus("Token ID didapatkan dari Google! Mengirim ke Go Backend...");
-    
-    try {
-      // Menembak API Go Fiber milik kita
-      const res = await axios.post("http://localhost:8080/api/v1/auth/google", {
-        token: credentialResponse.credential,
-      });
-
-      setStatus("Sukses! Backend berhasil memverifikasi token.");
-      setBackendResponse(res.data);
-    } catch (error: any) {
-      setStatus("Gagal! Backend menolak token atau terjadi error.");
-      setBackendResponse(error.response?.data || error.message);
-    }
-  };
+export default async function Home() {
+  // Cek apakah user sudah login di sisi server
+  const cookieStore = await cookies();
+  const token = cookieStore.get("mosque_session")?.value;
+  const isLoggedIn = !!token; // true jika token ada
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4 font-[family-name:var(--font-geist-sans)]">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 w-full max-w-md flex flex-col items-center">
-        <h1 className="text-2xl font-bold mb-2 text-gray-800">Mosque SaaS</h1>
-        <p className="text-sm text-gray-500 mb-8 text-center">
-          Prototipe Integrasi Otentikasi Google ke Go Fiber
-        </p>
+    <main className="relative min-h-screen font-[family-name:var(--font-geist-sans)] selection:bg-blue-100 selection:text-blue-900">
+      
+      {/* 1. Navbar Transparan */}
+      <Navbar isLoggedIn={isLoggedIn} />
 
-        {/* Komponen Tombol Bawaan Google */}
-        <GoogleLogin
-          onSuccess={handleGoogleSuccess}
-          onError={() => {
-            setStatus("Google Login Dibatalkan / Gagal di sisi Frontend.");
-          }}
-          useOneTap // Akan memunculkan popup otomatis di pojok kanan atas
+      {/* 2. Background Image dengan Overlay & Blur filter */}
+      <div className="absolute inset-0 z-0">
+        {/* Menggunakan gambar masjid yang indah dari Unsplash */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1564683214965-3619addd900d?q=80&w=2000&auto=format&fit=crop')" }}
         />
+        {/* Lapisan filter putih transparan untuk efek "Putih Suci" */}
+        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px]"></div>
+        {/* Gradient ke bawah agar teks lebih terbaca */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-white"></div>
+      </div>
 
-        {/* Panel Log Status */}
-        <div className="mt-8 w-full">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Status Alur:</h3>
-          <p className="text-sm text-gray-700 bg-blue-50 border border-blue-100 p-3 rounded-lg">
-            {status}
-          </p>
+      {/* 3. Hero Content (Tengah Layar) */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4 max-w-4xl mx-auto pt-20">
+        
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-md border border-gray-200 shadow-sm mb-8 animate-fade-in-up">
+          <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
+          <span className="text-sm font-medium text-gray-700">Platform Digital Masjid Modern</span>
         </div>
 
-        {/* Panel Respons dari Backend Go Fiber */}
-        {backendResponse && (
-          <div className="mt-4 w-full">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Respons Go Fiber:</h3>
-            <pre className="text-xs bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto whitespace-pre-wrap">
-              {JSON.stringify(backendResponse, null, 2)}
-            </pre>
-          </div>
+        <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6 drop-shadow-sm">
+          Kelola Masjid Anda dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Lebih Berkah.</span>
+        </h1>
+        
+        <p className="text-lg md:text-xl text-gray-700 mb-10 max-w-2xl font-medium drop-shadow-sm leading-relaxed">
+          Satu platform terintegrasi untuk jadwal sholat, pengelolaan donasi, agenda kajian, hingga website publik untuk jamaah. Tanpa ribet, langsung pakai.
+        </p>
+
+        {!isLoggedIn && (
+          <p className="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-widest">
+            Mulai Gratis Sekarang
+          </p>
         )}
+
       </div>
-    </div>
+      
+    </main>
   );
 }
