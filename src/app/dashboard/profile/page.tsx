@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getProfileFormData } from "../../actions/profile";
 import ProfileForm from "./ProfileForm";
+import { Building2 } from "lucide-react";
 
 export default async function ProfilePage() {
   const profile = await getProfileFormData();
@@ -10,15 +11,21 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="border-b pb-4 mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Profil Masjid</h2>
-        <p className="text-gray-500 text-sm mt-1">
-          Kelola identitas resmi masjid yang akan dipakai lintas modul website.
-        </p>
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      <div className="border-b border-gray-200 pb-5 flex items-center gap-3">
+        <div className="bg-emerald-100 p-2.5 rounded-lg text-emerald-700">
+          <Building2 className="w-6 h-6" />
+        </div>
+        <div>
+          {/* UBAH KE PROFIL MASJID */}
+          <h2 className="text-2xl font-bold text-gray-800">Profil Masjid</h2>
+          <p className="text-gray-500 text-sm mt-1">
+            Kelola identitas resmi dan kontak operasional yang akan ditampilkan ke jamaah.
+          </p>
+        </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <ProfileForm initialData={profile.data} />
       </div>
     </div>
