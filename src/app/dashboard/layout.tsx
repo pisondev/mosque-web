@@ -10,19 +10,19 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
 
-  // Definisi Menu Sidebar
   const menuItems = [
     { name: "Ikhtisar", path: "/dashboard", icon: "📊" },
     { name: "Domain & Akses", path: "/dashboard/domains", icon: "🌐" },
+    { name: "Profil Masjid", path: "/dashboard/profile", icon: "🏛️" },
     { name: "Manajemen Artikel", path: "/dashboard/content", icon: "📝" },
+    { name: "Halaman Statis", path: "/dashboard/static-pages", icon: "📄" },
     { name: "Kategori & Tag", path: "/dashboard/tags", icon: "🏷️" },
-    { name: "Jadwal & Agenda", path: "/dashboard/agenda", icon: "🗓️" }, // Untuk Sprint 3 nanti
+    { name: "Jadwal & Agenda", path: "/dashboard/agenda", icon: "🗓️" },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50 flex font-[family-name:var(--font-geist-sans)]">
       
-      {/* 1. Sidebar Kiri (Desktop) */}
       <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col shadow-sm z-10">
         <div className="h-16 flex items-center px-6 border-b border-gray-100">
           <span className="text-2xl mr-2">🕌</span>
@@ -35,7 +35,8 @@ export default function DashboardLayout({
           </p>
           
           {menuItems.map((item) => {
-            const isActive = pathname === item.path;
+            const isActive =
+              item.path === "/dashboard" ? pathname === item.path : pathname.startsWith(item.path);
             return (
               <Link
                 key={item.name}
@@ -53,7 +54,6 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        {/* Area Bawah Sidebar (Keluar) */}
         <div className="p-4 border-t border-gray-100">
           <a 
             href="/logout" 
@@ -64,17 +64,14 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* 2. Area Konten Utama Kanan */}
       <div className="flex-1 flex flex-col min-w-0">
-        
-        {/* Header Atas (Mobile & Desktop) */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 shadow-sm z-0">
           <div className="md:hidden flex items-center gap-2">
             <span className="text-2xl">🕌</span>
             <span className="font-bold text-gray-800">Mosque SaaS</span>
           </div>
           
-          <div className="flex-1"></div> {/* Spacer */}
+          <div className="flex-1"></div>
           
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500 hidden sm:block">Panel Pengelola</span>
@@ -84,7 +81,6 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        {/* Tempat Halaman Spesifik Dirender (children) */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
           {children}
         </main>

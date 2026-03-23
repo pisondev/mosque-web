@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createTag, deleteTag } from "../../actions/tags";
+import { createTag, deleteTag, updateTag } from "../../actions/tags";
 
 // 1. Komponen Form Tambah Tag
 export function CreateTagForm() {
@@ -67,7 +67,66 @@ export function CreateTagForm() {
   );
 }
 
-// 2. Komponen Tombol Hapus
+export function EditTagForm({ id, name }: { id: number; name: string }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  if (!isEditing) {
+    return (
+      <button
+        onClick={() => setIsEditing(true)}
+        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors text-sm font-medium"
+      >
+        Edit
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={(formData) => {
+        startTransition(async () => {
+          setError(null);
+          formData.set("id", String(id));
+          const res = await updateTag(formData);
+          if (res?.error) {
+            setError(res.error);
+            return;
+          }
+          setIsEditing(false);
+        });
+      }}
+      className="flex items-center gap-2 justify-end"
+    >
+      <input
+        type="text"
+        name="name"
+        defaultValue={name}
+        required
+        disabled={isPending}
+        className="w-40 px-2 py-1.5 rounded-md border border-gray-300 text-sm"
+      />
+      <button
+        type="submit"
+        disabled={isPending}
+        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+      >
+        Simpan
+      </button>
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => setIsEditing(false)}
+        className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+      >
+        Batal
+      </button>
+      {error && <span className="text-xs text-red-600">{error}</span>}
+    </form>
+  );
+}
+
 export function DeleteTagButton({ id }: { id: number }) {
   const [isPending, startTransition] = useTransition();
 

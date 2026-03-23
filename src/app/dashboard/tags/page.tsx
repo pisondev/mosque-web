@@ -1,10 +1,16 @@
 import { getTags } from "../../actions/tags";
-import { CreateTagForm, DeleteTagButton } from "./TagComponents";
+import { CreateTagForm, DeleteTagButton, EditTagForm } from "./TagComponents";
+
+type TagItem = {
+  id: number;
+  name: string;
+  slug: string;
+  scope: string;
+};
 
 export default async function TagsPage() {
-  // Tarik data langsung dari server sebelum HTML dikirim ke browser
   const res = await getTags();
-  const tags = res?.data || [];
+  const tags: TagItem[] = Array.isArray(res?.data) ? res.data : [];
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -46,7 +52,7 @@ export default async function TagsPage() {
                       </td>
                     </tr>
                   ) : (
-                    tags.map((tag: any) => (
+                    tags.map((tag) => (
                       <tr key={tag.id} className="hover:bg-gray-50 transition-colors">
                         <td className="p-4 font-medium text-gray-900">{tag.name}</td>
                         <td className="p-4 text-gray-500 text-sm font-mono">{tag.slug}</td>
@@ -59,7 +65,8 @@ export default async function TagsPage() {
                             {tag.scope}
                           </span>
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-4 text-right space-y-2">
+                          <EditTagForm id={tag.id} name={tag.name} />
                           <DeleteTagButton id={tag.id} />
                         </td>
                       </tr>
