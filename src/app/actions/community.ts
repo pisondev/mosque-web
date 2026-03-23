@@ -115,7 +115,6 @@ export async function deleteEvent(id: number) {
 // ==========================================
 // 2. MODULE: GALLERY ALBUMS & ITEMS
 // ==========================================
-// Note: Kita siapkan kerangkanya agar siap pakai saat masuk ke UI Gallery
 
 export async function listGalleryAlbums(page = 1, limit = 50) {
   const headers = await authHeaders();
@@ -126,6 +125,43 @@ export async function listGalleryAlbums(page = 1, limit = 50) {
   } catch { return { status: "error", message: "Gagal terhubung", data: [] }; }
 }
 
+export async function createGalleryAlbum(formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  try {
+    const res = await fetch(`${API_URL}/tenant/gallery/albums`, { method: "POST", headers, body: JSON.stringify(payload) });
+    if (!res.ok) return { error: "Gagal menambah album" };
+    revalidatePath("/dashboard/gallery");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+export async function updateGalleryAlbum(formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  const id = payload.id;
+  delete payload.id;
+  try {
+    const res = await fetch(`${API_URL}/tenant/gallery/albums/${id}`, { method: "PUT", headers, body: JSON.stringify(payload) });
+    if (!res.ok) return { error: "Gagal memperbarui album" };
+    revalidatePath("/dashboard/gallery");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+export async function deleteGalleryAlbum(id: number) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  try {
+    const res = await fetch(`${API_URL}/tenant/gallery/albums/${id}`, { method: "DELETE", headers });
+    if (!res.ok) return { error: "Gagal menghapus album" };
+    revalidatePath("/dashboard/gallery");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
 export async function listGalleryItems(page = 1, limit = 100) {
   const headers = await authHeaders();
   if (!headers) return { status: "error", message: "Unauthorized", data: [] };
@@ -133,6 +169,43 @@ export async function listGalleryItems(page = 1, limit = 100) {
     const res = await fetch(`${API_URL}/tenant/gallery/items?page=${page}&limit=${limit}`, { headers, cache: "no-store" });
     return res.json();
   } catch { return { status: "error", message: "Gagal terhubung", data: [] }; }
+}
+
+export async function createGalleryItem(formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  try {
+    const res = await fetch(`${API_URL}/tenant/gallery/items`, { method: "POST", headers, body: JSON.stringify(payload) });
+    if (!res.ok) return { error: "Gagal menambah foto/video" };
+    revalidatePath("/dashboard/gallery");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+export async function updateGalleryItem(formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  const id = payload.id;
+  delete payload.id;
+  try {
+    const res = await fetch(`${API_URL}/tenant/gallery/items/${id}`, { method: "PUT", headers, body: JSON.stringify(payload) });
+    if (!res.ok) return { error: "Gagal memperbarui foto/video" };
+    revalidatePath("/dashboard/gallery");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+export async function deleteGalleryItem(id: number) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  try {
+    const res = await fetch(`${API_URL}/tenant/gallery/items/${id}`, { method: "DELETE", headers });
+    if (!res.ok) return { error: "Gagal menghapus foto/video" };
+    revalidatePath("/dashboard/gallery");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
 }
 
 // ==========================================
