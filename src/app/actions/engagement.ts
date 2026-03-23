@@ -166,4 +166,55 @@ export async function deleteExternalLink(id: number) {
   } catch { return { error: "Terjadi kesalahan jaringan" }; }
 }
 
-// (Fungsi untuk Website Features akan kita tambahkan di sini nanti saat masuk ke modulnya agar kita fokus satu per satu).
+// ==========================================
+// 4. MODULE: WEBSITE FEATURES
+// ==========================================
+export async function listFeatureCatalog() {
+  const headers = await authHeaders();
+  if (!headers) return { status: "error", message: "Unauthorized", data: [] };
+  try {
+    const res = await fetch(`${API_URL}/tenant/feature-catalog`, { headers, cache: "no-store" });
+    return res.json();
+  } catch { return { status: "error", message: "Gagal terhubung", data: [] }; }
+}
+
+export async function listWebsiteFeatures() {
+  const headers = await authHeaders();
+  if (!headers) return { status: "error", message: "Unauthorized", data: [] };
+  try {
+    const res = await fetch(`${API_URL}/tenant/website-features`, { headers, cache: "no-store" });
+    return res.json();
+  } catch { return { status: "error", message: "Gagal terhubung", data: [] }; }
+}
+
+export async function updateWebsiteFeature(featureId: number, formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  
+  try {
+    const res = await fetch(`${API_URL}/tenant/website-features/${featureId}`, { 
+      method: "PUT", 
+      headers, 
+      body: JSON.stringify(payload) 
+    });
+    if (!res.ok) return { error: "Gagal memperbarui fitur website" };
+    revalidatePath("/dashboard/features");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+export async function bulkUpdateWebsiteFeatures(payload: any) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  try {
+    const res = await fetch(`${API_URL}/tenant/website-features/bulk`, { 
+      method: "PATCH", 
+      headers, 
+      body: JSON.stringify(payload) 
+    });
+    if (!res.ok) return { error: "Gagal memperbarui status secara massal" };
+    revalidatePath("/dashboard/features");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
