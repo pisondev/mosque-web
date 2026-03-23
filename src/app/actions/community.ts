@@ -171,3 +171,23 @@ export async function deleteManagementMember(id: number) {
   } catch { return { error: "Terjadi kesalahan jaringan" }; }
 }
 
+export async function updateManagementMember(formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  const id = payload.id;
+  delete payload.id; // Buang ID dari payload karena dipakai di URL
+
+  try {
+    const res = await fetch(`${API_URL}/tenant/management-members/${id}`, { 
+      method: "PUT", 
+      headers, 
+      body: JSON.stringify(payload) 
+    });
+    if (!res.ok) return { error: "Gagal memperbarui data pengurus" };
+    revalidatePath("/dashboard/management");
+    return { success: true };
+  } catch { 
+    return { error: "Terjadi kesalahan jaringan" }; 
+  }
+}
