@@ -68,4 +68,102 @@ export async function deleteDonationChannel(id: number) {
   } catch { return { error: "Terjadi kesalahan jaringan" }; }
 }
 
-// (Fungsi untuk Social Links, External Links, dan Website Features akan kita tambahkan di sini nanti saat masuk ke modulnya agar kita fokus satu per satu).
+// ==========================================
+// 2. MODULE: SOCIAL LINKS
+// ==========================================
+export async function listSocialLinks(page = 1, limit = 50) {
+  const headers = await authHeaders();
+  if (!headers) return { status: "error", message: "Unauthorized", data: [] };
+  try {
+    const res = await fetch(`${API_URL}/tenant/social-links?page=${page}&limit=${limit}`, { headers, cache: "no-store" });
+    return res.json();
+  } catch { return { status: "error", message: "Gagal terhubung", data: [] }; }
+}
+
+export async function createSocialLink(formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  try {
+    const res = await fetch(`${API_URL}/tenant/social-links`, { method: "POST", headers, body: JSON.stringify(payload) });
+    if (!res.ok) return { error: "Gagal menambah tautan sosial" };
+    revalidatePath("/dashboard/links");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+export async function updateSocialLink(formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  const id = payload.id;
+  delete payload.id;
+  try {
+    const res = await fetch(`${API_URL}/tenant/social-links/${id}`, { method: "PUT", headers, body: JSON.stringify(payload) });
+    if (!res.ok) return { error: "Gagal memperbarui tautan sosial" };
+    revalidatePath("/dashboard/links");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+export async function deleteSocialLink(id: number) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  try {
+    const res = await fetch(`${API_URL}/tenant/social-links/${id}`, { method: "DELETE", headers });
+    if (!res.ok) return { error: "Gagal menghapus tautan sosial" };
+    revalidatePath("/dashboard/links");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+// ==========================================
+// 3. MODULE: EXTERNAL LINKS
+// ==========================================
+export async function listExternalLinks(page = 1, limit = 50) {
+  const headers = await authHeaders();
+  if (!headers) return { status: "error", message: "Unauthorized", data: [] };
+  try {
+    const res = await fetch(`${API_URL}/tenant/external-links?page=${page}&limit=${limit}`, { headers, cache: "no-store" });
+    return res.json();
+  } catch { return { status: "error", message: "Gagal terhubung", data: [] }; }
+}
+
+export async function createExternalLink(formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  try {
+    const res = await fetch(`${API_URL}/tenant/external-links`, { method: "POST", headers, body: JSON.stringify(payload) });
+    if (!res.ok) return { error: "Gagal menambah tautan eksternal" };
+    revalidatePath("/dashboard/links");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+export async function updateExternalLink(formData: FormData) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  const payload = JSON.parse(String(formData.get("payload") || "{}"));
+  const id = payload.id;
+  delete payload.id;
+  try {
+    const res = await fetch(`${API_URL}/tenant/external-links/${id}`, { method: "PUT", headers, body: JSON.stringify(payload) });
+    if (!res.ok) return { error: "Gagal memperbarui tautan eksternal" };
+    revalidatePath("/dashboard/links");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+export async function deleteExternalLink(id: number) {
+  const headers = await authHeaders();
+  if (!headers) return { error: "Sesi tidak valid." };
+  try {
+    const res = await fetch(`${API_URL}/tenant/external-links/${id}`, { method: "DELETE", headers });
+    if (!res.ok) return { error: "Gagal menghapus tautan eksternal" };
+    revalidatePath("/dashboard/links");
+    return { success: true };
+  } catch { return { error: "Terjadi kesalahan jaringan" }; }
+}
+
+// (Fungsi untuk Website Features akan kita tambahkan di sini nanti saat masuk ke modulnya agar kita fokus satu per satu).
