@@ -3,8 +3,8 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-// Konstanta base URL Go Fiber
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// PERBAIKAN 1: Gunakan API_INTERNAL_URL untuk komunikasi Server-to-Server
+const BASE_URL = process.env.API_INTERNAL_URL || "http://localhost:8080";
 const API_URL = `${BASE_URL}/api/v1`;
 
 export async function setupTenantAction(formData: FormData) {
@@ -35,8 +35,8 @@ export async function setupTenantAction(formData: FormData) {
       return { error: data.message || "Gagal menyimpan data." };
     }
 
-    // Refresh halaman dashboard agar data baru (bukan "Toko Baru" lagi) termuat
-    revalidatePath("/dashboard");
+    // PERBAIKAN 2: Gunakan parameter "layout" agar sapu bersih
+    revalidatePath("/dashboard", "layout");
     return { success: true };
   } catch (error) {
     return { error: "Terjadi kesalahan jaringan." };

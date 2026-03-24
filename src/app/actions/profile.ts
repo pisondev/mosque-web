@@ -3,7 +3,8 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// PERBAIKAN 1: Gunakan API_INTERNAL_URL
+const BASE_URL = process.env.API_INTERNAL_URL || "http://localhost:8080";
 const API_URL = `${BASE_URL}/api/v1`;
 
 type TenantMeResponse = {
@@ -116,8 +117,8 @@ export async function upsertProfileAction(formData: FormData) {
       return { error: data?.message || "Gagal menyimpan profil masjid" };
     }
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/profile");
+    // 👇 INI PERBAIKANNYA: Gunakan "layout" untuk menyapu bersih cache
+    revalidatePath("/dashboard", "layout");
     return { success: true };
   } catch {
     return { error: "Terjadi kesalahan jaringan" };
