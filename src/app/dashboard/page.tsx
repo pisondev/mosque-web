@@ -14,16 +14,23 @@ async function getTenantProfile() {
   if (!token) return null;
 
   try {
-    const res = await fetch("http://localhost:8080/api/v1/tenant/me", {
+    // Jika API_INTERNAL_URL kosong (seperti di lokalmu), ia akan otomatis pakai localhost:8080
+    const baseUrl = process.env.API_INTERNAL_URL || "http://localhost:8080";
+    
+    const res = await fetch(`${baseUrl}/api/v1/tenant/me`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
+    
     if (!res.ok) return null;
     return res.json();
   } catch (error) {
+    console.error("Gagal fetch data profil tenant:", error);
     return null;
   }
 }
+
+// ... sisa kode
 
 export default async function DashboardPage() {
   const profile = await getTenantProfile();
