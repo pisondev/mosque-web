@@ -20,7 +20,7 @@ export const MENU_DATA = [
     items: [
       { name: "Jadwal & Agenda", path: "/dashboard/agenda", icon: CalendarDays },
       { name: "Manajemen Event", path: "/dashboard/events", icon: Megaphone },
-      { name: "Kanal Donasi", path: "/dashboard/donations", icon: Banknote },
+      { name: "Akun Statis", path: "/dashboard/finance/static-accounts", icon: Banknote },
       { name: "Tautan Publik", path: "/dashboard/links", icon: Link2 },
     ]
   },
