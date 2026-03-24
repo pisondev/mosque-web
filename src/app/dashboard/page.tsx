@@ -5,7 +5,7 @@ import OnboardingForm from "../../components/OnboardingForm";
 import { 
   Globe, Building2, CalendarDays, Megaphone, 
   Banknote, Users, ArrowUpRight, CheckCircle2, 
-  LayoutDashboard, Sparkles
+  LayoutDashboard, Sparkles, ShieldCheck
 } from "lucide-react";
 
 async function getTenantProfile() {
@@ -59,23 +59,71 @@ export default async function DashboardPage() {
       {/* TAMPILAN ONBOARDING (JIKA BARU PERTAMA KALI LOGIN) */}
       {/* --------------------------------------------------------- */}
       {isNeedsSetup ? (
-        <div className="flex flex-col items-center justify-center min-h-[75vh] w-full max-w-2xl mx-auto">
-          <div className="bg-white p-8 sm:p-10 rounded-2xl shadow-xl border border-gray-100 w-full relative overflow-hidden">
-            {/* Garis Aksen Estetik */}
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-yellow-400 to-emerald-600"></div>
+        <div className="min-h-[80vh] flex flex-col items-center justify-center py-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          
+          <div className="w-full max-w-3xl relative">
+            {/* Dekorasi Glow Latar Belakang */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg h-full bg-emerald-400/20 blur-[100px] rounded-full pointer-events-none -z-10"></div>
             
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 mb-5 shadow-sm border border-emerald-100">
-                <Building2 className="w-8 h-8" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Selamat Datang di eTAKMIR!</h2>
-              <p className="text-gray-500 mt-2.5 text-sm sm:text-base px-4">
-                Langkah pertama menuju masjid yang lebih modern. Mari lengkapi profil dasar masjid Anda terlebih dahulu.
-              </p>
-            </div>
+            <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col md:flex-row relative">
+              
+              {/* Sisi Kiri: Visual & Value Proposition (Aksen Hijau) */}
+              <div className="md:w-5/12 bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 p-8 sm:p-10 text-white flex flex-col justify-between relative overflow-hidden">
+                {/* Pattern Dekoratif */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-yellow-400/10 rounded-full translate-y-1/4 -translate-x-1/4 blur-2xl"></div>
 
-            <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-              <OnboardingForm />
+                <div className="relative z-10">
+                  <div className="inline-flex items-center gap-2 mb-8 bg-white/10 px-3 py-1.5 rounded-full border border-white/20 backdrop-blur-sm">
+                    <Sparkles className="w-4 h-4 text-yellow-300" />
+                    <span className="text-xs font-semibold tracking-wide uppercase text-emerald-50">Langkah Awal</span>
+                  </div>
+                  
+                  <h2 className="text-3xl font-bold leading-tight mb-4 drop-shadow-sm">
+                    Mulai Digitalisasi Masjid Anda.
+                  </h2>
+                  <p className="text-emerald-100/90 text-sm leading-relaxed">
+                    Sistem ini dirancang untuk memudahkan takmir dalam mengelola administrasi, keuangan, dan informasi jamaah dalam satu pintu.
+                  </p>
+                </div>
+
+                <div className="relative z-10 mt-12 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-emerald-600/50 p-1.5 rounded-md border border-emerald-500/30">
+                      <CheckCircle2 className="w-4 h-4 text-yellow-400" />
+                    </div>
+                    <span className="text-sm font-medium text-emerald-50">Website publik siap pakai</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-emerald-600/50 p-1.5 rounded-md border border-emerald-500/30">
+                      <ShieldCheck className="w-4 h-4 text-yellow-400" />
+                    </div>
+                    <span className="text-sm font-medium text-emerald-50">Data jamaah terenkripsi aman</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sisi Kanan: Form Profil (Area Bersih) */}
+              <div className="md:w-7/12 p-8 sm:p-10 bg-white flex flex-col justify-center">
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Profil Organisasi</h3>
+                  <p className="text-gray-500 text-sm">
+                    Silakan lengkapi nama masjid dan atur alamat tautan (subdomain) untuk portal jamaah Anda.
+                  </p>
+                </div>
+
+                {/* Kontainer Form */}
+                <div className="bg-gray-50/50 p-1 rounded-2xl border border-gray-100">
+                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                    <OnboardingForm />
+                  </div>
+                </div>
+                
+                <p className="text-center text-xs text-gray-400 mt-6 font-medium">
+                  Informasi ini dapat diubah kembali di pengaturan profil nanti.
+                </p>
+              </div>
+
             </div>
           </div>
         </div>
