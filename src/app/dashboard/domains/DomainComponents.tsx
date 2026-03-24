@@ -1,115 +1,143 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition, useRef, useState } from "react";
 import { createDomain, deleteDomain, updateDomainStatus } from "../../actions/domains";
+import CustomSelect from "../../../components/ui/CustomSelect";
+import { useToast } from "../../../components/ui/Toast";
+import { Plus, Trash2 } from "lucide-react";
 
-const DOMAIN_STATUS_OPTIONS = ["pending", "verifying", "active", "disabled"] as const;
-
+// --- 1. KOMPONEN FORM TAMBAH DOMAIN ---
 export function CreateDomainForm() {
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { addToast } = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
+  
+  // State lokal untuk memantau jenis domain agar bisa menampilkan hint yang berbeda
+  const [domainType, setDomainType] = useState("subdomain");
 
   const handleAction = (formData: FormData) => {
     startTransition(async () => {
-      setError(null);
       const res = await createDomain(formData);
+      
       if (res?.error) {
-        setError(res.error);
-        return;
+        addToast(res.error, "error");
+      } else {
+        addToast("Domain baru berhasil didaftarkan!", "success");
+        formRef.current?.reset();
       }
-      (document.getElementById("form-domain") as HTMLFormElement | null)?.reset();
     });
   };
 
   return (
-    <form id="form-domain" action={handleAction} className="space-y-4">
-      {error && (
-        <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-200">
-          {error}
-        </div>
-      )}
-
+    <form id="form-domain" ref={formRef} action={handleAction} className="space-y-6">
+      
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Jenis Domain</label>
-        <select
+        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Jenis Domain <span className="text-rose-500">*</span></label>
+        <CustomSelect
           name="domain_type"
-          required
+          defaultValue="subdomain"
+          onChange={(val) => setDomainType(val)}
           disabled={isPending}
-          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 bg-white disabled:bg-gray-100"
-        >
-          <option value="subdomain">Subdomain</option>
-          <option value="custom_domain">Custom Domain</option>
-        </select>
+          options={[
+            { label: "Subdomain eTAKMIR", value: "subdomain" },
+            { label: "Custom Domain Sendiri", value: "custom_domain" }
+          ]}
+        />
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Hostname</label>
+        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Hostname / Alamat Web <span className="text-rose-500">*</span></label>
         <input
           type="text"
           name="hostname"
           required
           disabled={isPending}
-          placeholder="contoh: masjid-alfalah.mosquesaas.com"
-          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 disabled:bg-gray-100"
+          placeholder={domainType === "subdomain" ? "masjid-alfalah.mosquesaas.com" : "www.masjidalfalah.id"}
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm text-gray-900 disabled:bg-gray-100 shadow-sm font-mono"
         />
+        {domainType === "custom_domain" ? (
+          <p className="text-[10px] text-amber-600 mt-2 font-medium bg-amber-50 p-2 rounded border border-amber-100">
+            ⚠️ Pastikan Anda sudah mengarahkan CNAME/A Record domain Anda ke server eTAKMIR sebelum menambahkan.
+          </p>
+        ) : (
+          <p className="text-[10px] text-gray-500 mt-2">
+            Pilih nama yang singkat dan mudah diingat jamaah.
+          </p>
+        )}
       </div>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2.5 rounded-lg transition-colors"
-      >
-        {isPending ? "Menyimpan..." : "+ Tambah Domain"}
-      </button>
+      <div className="pt-2 border-t border-gray-100">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md active:scale-95"
+        >
+          {isPending ? "Mendaftarkan..." : <><Plus className="w-4 h-4" /> Daftarkan Domain</>}
+        </button>
+      </div>
     </form>
   );
 }
 
-export function DomainStatusControl({ id, currentStatus }: { id: number; currentStatus: string }) {
+// --- 2. KOMPONEN DROPDOWN STATUS DOMAIN ---
+export function DomainStatusControl({ id, currentStatus, hostname }: { id: number; currentStatus: string, hostname: string }) {
   const [isPending, startTransition] = useTransition();
+  const { addToast } = useToast();
+
+  const handleStatusChange = (nextStatus: string) => {
+    startTransition(async () => {
+      const res = await updateDomainStatus(id, nextStatus);
+      if (res?.error) {
+        addToast("Gagal mengubah status domain.", "error");
+      } else {
+        addToast(`Status "${hostname}" berhasil diubah!`, "success");
+      }
+    });
+  };
 
   return (
-    <select
+    <CustomSelect
+      name={`status-${id}`}
       defaultValue={currentStatus}
       disabled={isPending}
-      onChange={(event) => {
-        const nextStatus = event.target.value;
-        startTransition(async () => {
-          const res = await updateDomainStatus(id, nextStatus);
-          if (res?.error) {
-            alert(res.error);
-          }
-        });
-      }}
-      className="px-2 py-1.5 rounded-md border border-gray-300 text-sm bg-white disabled:bg-gray-100"
-    >
-      {DOMAIN_STATUS_OPTIONS.map((status) => (
-        <option key={status} value={status}>
-          {status}
-        </option>
-      ))}
-    </select>
+      onChange={handleStatusChange}
+      options={[
+        { label: "⏳ Pending", value: "pending" },
+        { label: "🔎 Verifying", value: "verifying" },
+        { label: "🟢 Active", value: "active" },
+        { label: "🔴 Disabled", value: "disabled" }
+      ]}
+    />
   );
 }
 
-export function DeleteDomainButton({ id }: { id: number }) {
+// --- 3. KOMPONEN TOMBOL HAPUS DOMAIN ---
+export function DeleteDomainButton({ id, hostname }: { id: number, hostname: string }) {
   const [isPending, startTransition] = useTransition();
+  const { addToast } = useToast();
+
+  const handleDelete = () => {
+    if (!window.confirm(`Yakin ingin mencabut domain "${hostname}" dari sistem?`)) return;
+    
+    startTransition(async () => {
+      const res = await deleteDomain(id);
+      if (res?.error) {
+        addToast(res.error, "error");
+      } else {
+         addToast(`Domain ${hostname} berhasil dihapus.`, "success");
+      }
+    });
+  };
 
   return (
     <button
+      type="button"
+      onClick={handleDelete}
       disabled={isPending}
-      onClick={() => {
-        if (!confirm("Yakin ingin menghapus domain ini?")) return;
-        startTransition(async () => {
-          const res = await deleteDomain(id);
-          if (res?.error) {
-            alert(res.error);
-          }
-        });
-      }}
-      className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors text-sm font-medium disabled:opacity-50"
+      title="Hapus Domain"
+      className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50"
     >
-      {isPending ? "Menghapus..." : "Hapus"}
+      <Trash2 className="w-4 h-4" />
     </button>
   );
 }

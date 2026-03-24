@@ -5,14 +5,16 @@ import {
   createSocialLink, updateSocialLink, deleteSocialLink,
   createExternalLink, updateExternalLink, deleteExternalLink 
 } from "../../actions/engagement";
+import CustomSelect from "../../../components/ui/CustomSelect";
+import { useToast } from "../../../components/ui/Toast";
+import { CopyToClipboard, ConfirmRedirect } from "../../../components/ui/InteractiveText";
+import { Plus, Edit3, Trash2, Save, X, ExternalLink, Hash } from "lucide-react";
 
 export default function LinkManager({ initialSocial, initialExternal }: { initialSocial: any[], initialExternal: any[] }) {
   const [isPending, startTransition] = useTransition();
-  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const { addToast } = useToast();
   
-  // Tab Management: "social" | "external"
   const [activeTab, setActiveTab] = useState<"social" | "external">("social");
-  
   const [editingData, setEditingData] = useState<any | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
@@ -20,24 +22,34 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
   const handleAddNewClick = () => {
     setEditingData(null);
     setIsFormVisible(true);
-    setMessage(null);
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   };
 
   const handleEditClick = (data: any) => {
     setEditingData(data);
     setIsFormVisible(true);
-    setMessage(null);
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   };
 
   const handleDelete = (id: number, label: string, type: "social" | "external") => {
     if (!window.confirm(`Yakin ingin menghapus tautan "${label}"?`)) return;
     startTransition(async () => {
-      setMessage(null);
       const res = type === "social" ? await deleteSocialLink(id) : await deleteExternalLink(id);
-      if (res.error) setMessage({ text: res.error, type: "error" });
-      else setMessage({ text: `Berhasil menghapus tautan.`, type: "success" });
+      if (res.error) addToast(res.error, "error");
+      else addToast(`Berhasil menghapus tautan.`, "success");
+    });
+  };
+
+  const handleQuickStatusChange = (item: any, field: string, value: string, type: "social" | "external") => {
+    startTransition(async () => {
+      const payload = { ...item, [field]: value === 'true' || value === 'public' ? (field === 'visibility' ? 'public' : true) : (field === 'visibility' ? 'hidden' : false) };
+      const submitData = new FormData();
+      submitData.append("payload", JSON.stringify(payload));
+      
+      const res = type === "social" ? await updateSocialLink(submitData) : await updateExternalLink(submitData);
+      
+      if (res.error) addToast("Gagal memperbarui status", "error");
+      else addToast(`Status diperbarui!`, "success");
     });
   };
 
@@ -48,15 +60,9 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
 
     for (const [key, value] of formData.entries()) {
       if (typeof value === 'string' && value.trim() === '') continue;
-      
-      // Sanitasi
-      if (key === 'sort_order') {
-        payload[key] = parseInt(value as string, 10) || 0;
-      } else if (key === 'show_in_footer' || key === 'show_in_contact_page') {
-        payload[key] = value === 'true';
-      } else {
-        payload[key] = value;
-      }
+      if (key === 'sort_order') { payload[key] = parseInt(value as string, 10) || 0; } 
+      else if (key === 'show_in_footer' || key === 'show_in_contact_page') { payload[key] = value === 'true'; } 
+      else { payload[key] = value; }
     }
 
     if (editingData) payload.id = editingData.id;
@@ -64,18 +70,13 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
     submitData.append("payload", JSON.stringify(payload));
 
     startTransition(async () => {
-      setMessage(null);
       let res;
-      if (activeTab === "social") {
-        res = editingData ? await updateSocialLink(submitData) : await createSocialLink(submitData);
-      } else {
-        res = editingData ? await updateExternalLink(submitData) : await createExternalLink(submitData);
-      }
+      if (activeTab === "social") res = editingData ? await updateSocialLink(submitData) : await createSocialLink(submitData);
+      else res = editingData ? await updateExternalLink(submitData) : await createExternalLink(submitData);
       
-      if (res.error) {
-        setMessage({ text: res.error, type: "error" });
-      } else {
-        setMessage({ text: `Berhasil ${editingData ? "memperbarui" : "menambah"} tautan.`, type: "success" });
+      if (res.error) addToast(res.error, "error");
+      else {
+        addToast(`Berhasil ${editingData ? "memperbarui" : "menambah"} tautan.`, "success");
         setIsFormVisible(false);
         setEditingData(null);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -87,7 +88,6 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
     setActiveTab(tab);
     setIsFormVisible(false);
     setEditingData(null);
-    setMessage(null);
   };
 
   return (
@@ -95,66 +95,65 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
       
       {/* Tab Navigator */}
       <div className="flex border-b border-gray-200">
-        <button onClick={() => switchTab("social")} className={`py-3 px-6 text-sm font-semibold transition-colors border-b-2 ${activeTab === "social" ? "bg-white text-blue-600 border-blue-600" : "text-gray-500 border-transparent hover:text-gray-700"}`}>
-          1. Media Sosial
+        <button onClick={() => switchTab("social")} className={`py-3 px-6 text-sm font-semibold transition-colors border-b-2 ${activeTab === "social" ? "bg-white text-emerald-600 border-emerald-600" : "text-gray-500 border-transparent hover:text-gray-700"}`}>
+          Media Sosial
         </button>
-        <button onClick={() => switchTab("external")} className={`py-3 px-6 text-sm font-semibold transition-colors border-b-2 ${activeTab === "external" ? "bg-white text-blue-600 border-blue-600" : "text-gray-500 border-transparent hover:text-gray-700"}`}>
-          2. Tautan Eksternal Khusus
+        <button onClick={() => switchTab("external")} className={`py-3 px-6 text-sm font-semibold transition-colors border-b-2 ${activeTab === "external" ? "bg-white text-emerald-600 border-emerald-600" : "text-gray-500 border-transparent hover:text-gray-700"}`}>
+          Tautan Eksternal Khusus
         </button>
       </div>
 
-      {message && !isFormVisible && (
-        <div className={`p-4 rounded-xl border ${message.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-          {message.text}
-        </div>
-      )}
-
-      {/* ==================================================== */}
       {/* TAB 1: SOCIAL LINKS */}
-      {/* ==================================================== */}
       {activeTab === "social" && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col animate-in fade-in">
-          <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-            <h3 className="font-semibold text-gray-800">Daftar Akun Media Sosial</h3>
-            <button onClick={handleAddNewClick} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2">
-              <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-              Tambah Akun Baru
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col animate-in fade-in">
+          <div className="px-5 py-5 border-b border-gray-100 bg-white flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-gray-800">Daftar Akun Media Sosial</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Tautan resmi masjid (Instagram, YouTube, dll).</p>
+            </div>
+            <button onClick={handleAddNewClick} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 px-5 rounded-lg transition-colors flex items-center gap-2 shadow-sm active:scale-95">
+              <Plus className="w-4 h-4" /> Tambah Akun
             </button>
           </div>
-          <div className="overflow-x-auto">
+          
+          <div className="overflow-x-auto pb-24">
             <table className="w-full text-left border-collapse text-sm">
-              <thead className="bg-white text-gray-500 border-b border-gray-200">
+              <thead className="bg-gray-50/80 text-gray-500 border-b border-gray-100">
                 <tr>
-                  <th className="px-5 py-3 font-medium">Platform & Akun</th>
-                  <th className="px-5 py-3 font-medium">Tautan (URL)</th>
-                  <th className="px-5 py-3 font-medium text-center">Tampil di Footer</th>
-                  <th className="px-5 py-3 font-medium text-center">Tampil di Kontak</th>
-                  <th className="px-5 py-3 font-medium text-right">Aksi</th>
+                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px]">Platform & Akun</th>
+                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px]">Tautan (URL)</th>
+                  <th className="px-5 py-3 font-semibold text-center uppercase tracking-wider text-[11px] w-36">Tampil di Footer</th>
+                  <th className="px-5 py-3 font-semibold text-right uppercase tracking-wider text-[11px]">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {initialSocial.length === 0 ? (
-                  <tr><td colSpan={5} className="px-5 py-8 text-gray-500 text-center bg-gray-50/50">Belum ada tautan media sosial.</td></tr>
+                  <tr><td colSpan={4} className="px-5 py-12 text-gray-400 text-center bg-gray-50/30 font-medium">Belum ada tautan media sosial.</td></tr>
                 ) : (
                   initialSocial.sort((a,b) => a.sort_order - b.sort_order).map((link) => (
-                    <tr key={link.id} className="hover:bg-blue-50/30 transition-colors group">
+                    <tr key={link.id} className="hover:bg-emerald-50/30 transition-colors group">
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-gray-900 capitalize">{link.platform}</p>
+                        <p className="font-bold text-gray-900 capitalize flex items-center gap-1.5"><Hash className="w-3.5 h-3.5 text-emerald-500"/> {link.platform}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{link.account_name || "-"}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <a href={link.url} target="_blank" rel="noreferrer" className="text-blue-600 text-xs hover:underline truncate max-w-[200px] block">{link.url}</a>
+                        <div className="max-w-[250px] overflow-hidden">
+                           <ConfirmRedirect url={link.url} display="Kunjungi Halaman" />
+                        </div>
                       </td>
                       <td className="px-5 py-4 text-center">
-                        {link.show_in_footer ? <span className="text-green-500 font-bold">✓</span> : <span className="text-gray-300">-</span>}
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        {link.show_in_contact_page ? <span className="text-green-500 font-bold">✓</span> : <span className="text-gray-300">-</span>}
+                        <CustomSelect
+                          name={`show_in_footer-${link.id}`}
+                          defaultValue={String(link.show_in_footer)}
+                          disabled={isPending}
+                          onChange={(val) => handleQuickStatusChange(link, 'show_in_footer', val, 'social')}
+                          options={[{ label: "Tampil", value: "true" }, { label: "Sembunyi", value: "false" }]}
+                        />
                       </td>
                       <td className="px-5 py-4 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleEditClick(link)} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md text-xs font-medium border border-blue-200">Edit</button>
-                          <button onClick={() => handleDelete(link.id, link.platform, "social")} disabled={isPending} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-xs font-medium border border-red-200">Hapus</button>
+                          <button onClick={() => handleEditClick(link)} className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-md border border-gray-200 hover:border-emerald-200 transition-colors shadow-sm" title="Edit"><Edit3 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(link.id, link.platform, "social")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -166,49 +165,57 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
         </div>
       )}
 
-      {/* ==================================================== */}
       {/* TAB 2: EXTERNAL LINKS */}
-      {/* ==================================================== */}
       {activeTab === "external" && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col animate-in fade-in">
-          <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-            <h3 className="font-semibold text-gray-800">Daftar Tautan Eksternal</h3>
-            <button onClick={handleAddNewClick} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2">
-              <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-              Tambah Tautan Baru
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col animate-in fade-in">
+          <div className="px-5 py-5 border-b border-gray-100 bg-white flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-gray-800">Daftar Tautan Eksternal</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Formulir, GDrive, dan aplikasi pihak ketiga.</p>
+            </div>
+            <button onClick={handleAddNewClick} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 px-5 rounded-lg transition-colors flex items-center gap-2 shadow-sm active:scale-95">
+              <Plus className="w-4 h-4" /> Tambah Tautan
             </button>
           </div>
-          <div className="overflow-x-auto">
+          
+          <div className="overflow-x-auto pb-24">
             <table className="w-full text-left border-collapse text-sm">
-              <thead className="bg-white text-gray-500 border-b border-gray-200">
+              <thead className="bg-gray-50/80 text-gray-500 border-b border-gray-100">
                 <tr>
-                  <th className="px-5 py-3 font-medium">Label / Teks Link</th>
-                  <th className="px-5 py-3 font-medium">Jenis Tautan</th>
-                  <th className="px-5 py-3 font-medium">Tautan (URL)</th>
-                  <th className="px-5 py-3 font-medium text-center">Visibilitas</th>
-                  <th className="px-5 py-3 font-medium text-right">Aksi</th>
+                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px]">Label / Judul</th>
+                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px]">Jenis / Tujuan</th>
+                  <th className="px-5 py-3 font-semibold text-center uppercase tracking-wider text-[11px] w-36">Visibilitas</th>
+                  <th className="px-5 py-3 font-semibold text-right uppercase tracking-wider text-[11px]">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {initialExternal.length === 0 ? (
-                  <tr><td colSpan={5} className="px-5 py-8 text-gray-500 text-center bg-gray-50/50">Belum ada tautan eksternal.</td></tr>
+                  <tr><td colSpan={4} className="px-5 py-12 text-gray-400 text-center bg-gray-50/30 font-medium">Belum ada tautan eksternal.</td></tr>
                 ) : (
                   initialExternal.sort((a,b) => a.sort_order - b.sort_order).map((link) => (
-                    <tr key={link.id} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="px-5 py-4 font-semibold text-gray-900">{link.label}</td>
-                      <td className="px-5 py-4 text-gray-700 capitalize">{link.link_type}</td>
+                    <tr key={link.id} className="hover:bg-emerald-50/30 transition-colors group">
                       <td className="px-5 py-4">
-                        <a href={link.url} target="_blank" rel="noreferrer" className="text-blue-600 text-xs hover:underline truncate max-w-[200px] block">{link.url}</a>
+                        <p className="font-bold text-gray-900">{link.label}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 capitalize">{link.link_type}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="max-w-[250px] overflow-hidden">
+                           <CopyToClipboard text={link.url} display="Salin Link Tujuan" />
+                        </div>
                       </td>
                       <td className="px-5 py-4 text-center">
-                        <span className={`inline-block text-[10px] font-semibold px-2.5 py-1 rounded-full ${link.visibility === 'public' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                          {link.visibility === 'public' ? "Publik" : "Tersembunyi"}
-                        </span>
+                        <CustomSelect
+                          name={`visibility-${link.id}`}
+                          defaultValue={link.visibility}
+                          disabled={isPending}
+                          onChange={(val) => handleQuickStatusChange(link, 'visibility', val, 'external')}
+                          options={[{ label: "Publik", value: "public" }, { label: "Sembunyikan", value: "hidden" }]}
+                        />
                       </td>
                       <td className="px-5 py-4 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleEditClick(link)} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md text-xs font-medium border border-blue-200">Edit</button>
-                          <button onClick={() => handleDelete(link.id, link.label, "external")} disabled={isPending} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-xs font-medium border border-red-200">Hapus</button>
+                          <button onClick={() => handleEditClick(link)} className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-md border border-gray-200 hover:border-emerald-200 transition-colors shadow-sm" title="Edit"><Edit3 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(link.id, link.label, "external")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -224,126 +231,127 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
       {/* FORM ENTRY BERSAMA */}
       {/* ==================================================== */}
       {isFormVisible && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden scroll-mt-6 animate-in fade-in slide-in-from-bottom-4" ref={formRef}>
-          <div className="bg-gray-900 px-6 py-4 flex justify-between items-center">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-xl overflow-hidden scroll-mt-6 animate-in fade-in slide-in-from-bottom-4" ref={formRef}>
+          <div className="bg-emerald-900 px-6 py-4 flex justify-between items-center">
             <div>
               <h3 className="font-bold text-white text-lg">
                 {editingData ? "Edit " : "Tambah "} 
                 {activeTab === "social" ? "Media Sosial" : "Tautan Eksternal"}
               </h3>
-              <p className="text-gray-400 text-xs mt-0.5">{editingData ? `ID: #${editingData.id}` : "Lengkapi formulir di bawah ini."}</p>
+              <p className="text-emerald-200 text-xs mt-0.5">{editingData ? `ID: #${editingData.id}` : "Lengkapi formulir di bawah ini."}</p>
             </div>
-            <button type="button" onClick={() => setIsFormVisible(false)} className="text-gray-400 hover:text-white transition-colors bg-gray-800 p-2 rounded-full">
-              <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            <button type="button" onClick={() => setIsFormVisible(false)} className="text-emerald-200 hover:text-white transition-colors bg-emerald-800 hover:bg-emerald-700 p-2 rounded-full">
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          <form key={editingData ? editingData.id : "new"} onSubmit={handleSubmit} className="p-6 md:p-8 space-y-5">
+          <form key={editingData ? editingData.id : "new"} onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
             
-            {/* INPUT UNTUK SOCIAL LINKS */}
             {activeTab === "social" && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Platform <span className="text-red-500">*</span></label>
-                    <select name="platform" defaultValue={editingData?.platform || "instagram"} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 bg-white outline-none">
-                      <option value="instagram">Instagram</option>
-                      <option value="facebook">Facebook</option>
-                      <option value="youtube">YouTube</option>
-                      <option value="twitter">Twitter / X</option>
-                      <option value="tiktok">TikTok</option>
-                      <option value="whatsapp">WhatsApp Channel</option>
-                      <option value="telegram">Telegram</option>
-                      <option value="other">Lainnya</option>
-                    </select>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Platform <span className="text-rose-500">*</span></label>
+                    <CustomSelect 
+                      name="platform" 
+                      defaultValue={editingData?.platform || "instagram"} 
+                      disabled={isPending}
+                      options={[
+                        {label: "Instagram", value: "instagram"}, {label: "Facebook", value: "facebook"},
+                        {label: "YouTube", value: "youtube"}, {label: "Twitter / X", value: "twitter"},
+                        {label: "TikTok", value: "tiktok"}, {label: "WhatsApp Channel", value: "whatsapp"},
+                        {label: "Telegram", value: "telegram"}, {label: "Lainnya", value: "other"}
+                      ]} 
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1.5">Nama Akun (Opsional)</label>
-                    <input type="text" name="account_name" defaultValue={editingData?.account_name} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Cth: @masjidku" />
+                    <input type="text" name="account_name" defaultValue={editingData?.account_name} disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm disabled:bg-gray-100" placeholder="Cth: @masjidku" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">URL / Link Tautan <span className="text-red-500">*</span></label>
-                    <input type="url" name="url" defaultValue={editingData?.url} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://instagram.com/..." />
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">URL / Link Tautan <span className="text-rose-500">*</span></label>
+                    <input type="url" name="url" defaultValue={editingData?.url} required disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-sm disabled:bg-gray-100" placeholder="https://instagram.com/..." />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 border-t border-gray-100 pt-5">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tampil di Footer Web <span className="text-red-500">*</span></label>
-                      <select name="show_in_footer" defaultValue={editingData ? String(editingData.show_in_footer) : "true"} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white outline-none">
-                        <option value="true">Ya, Tampilkan</option><option value="false">Sembunyikan</option>
-                      </select>
+                <div className="bg-gray-50/80 -mx-6 md:-mx-8 px-6 md:px-8 py-6 border-t border-b border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-5">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tampil di Footer Web <span className="text-rose-500">*</span></label>
+                        <CustomSelect name="show_in_footer" defaultValue={editingData ? String(editingData.show_in_footer) : "true"} options={[{label: "Ya, Tampilkan", value: "true"}, {label: "Sembunyikan", value: "false"}]} disabled={isPending} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tampil di Halaman Kontak <span className="text-rose-500">*</span></label>
+                        <CustomSelect name="show_in_contact_page" defaultValue={editingData ? String(editingData.show_in_contact_page) : "true"} options={[{label: "Ya, Tampilkan", value: "true"}, {label: "Sembunyikan", value: "false"}]} disabled={isPending} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Urutan Tampil (Sort) <span className="text-rose-500">*</span></label>
+                        <input type="number" name="sort_order" defaultValue={editingData?.sort_order ?? 0} required disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm disabled:bg-gray-100 bg-white" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tampil di Halaman Kontak <span className="text-red-500">*</span></label>
-                      <select name="show_in_contact_page" defaultValue={editingData ? String(editingData.show_in_contact_page) : "true"} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white outline-none">
-                        <option value="true">Ya, Tampilkan</option><option value="false">Sembunyikan</option>
-                      </select>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Keterangan Tambahan (Opsional)</label>
+                      <textarea name="description" defaultValue={editingData?.description} rows={5} disabled={isPending} className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm bg-white disabled:bg-gray-100" placeholder="Cth: Akun resmi khusus streaming kajian..."></textarea>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Urutan Tampil (Sort) <span className="text-red-500">*</span></label>
-                      <input type="number" name="sort_order" defaultValue={editingData?.sort_order ?? 0} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 outline-none" />
-                    </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Keterangan Tambahan (Opsional)</label>
-                    <textarea name="description" defaultValue={editingData?.description} rows={3} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Cth: Akun resmi khusus streaming kajian..."></textarea>
                   </div>
                 </div>
               </>
             )}
 
-            {/* INPUT UNTUK EXTERNAL LINKS */}
             {activeTab === "external" && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Label / Teks Link <span className="text-red-500">*</span></label>
-                    <input type="text" name="label" defaultValue={editingData?.label} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 outline-none" placeholder="Cth: Formulir Qurban 2026" />
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Label / Teks Link <span className="text-rose-500">*</span></label>
+                    <input type="text" name="label" defaultValue={editingData?.label} required disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm disabled:bg-gray-100" placeholder="Cth: Formulir Qurban 2026" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Jenis Tautan <span className="text-red-500">*</span></label>
-                    <select name="link_type" defaultValue={editingData?.link_type || "form"} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white outline-none">
-                      <option value="form">Formulir (GForm/Typeform)</option>
-                      <option value="app">Aplikasi Pihak Ketiga</option>
-                      <option value="doc">Dokumen Luar (Drive/PDF)</option>
-                      <option value="other">Lainnya</option>
-                    </select>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Jenis Tautan <span className="text-rose-500">*</span></label>
+                    <CustomSelect 
+                      name="link_type" 
+                      defaultValue={editingData?.link_type || "form"} 
+                      disabled={isPending}
+                      options={[
+                        {label: "Formulir (GForm/Typeform)", value: "form"}, {label: "Aplikasi Pihak Ketiga", value: "app"},
+                        {label: "Dokumen Luar (Drive/PDF)", value: "doc"}, {label: "Lainnya", value: "other"}
+                      ]}
+                    />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">URL / Link Tujuan <span className="text-red-500">*</span></label>
-                    <input type="url" name="url" defaultValue={editingData?.url} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 outline-none" placeholder="https://docs.google.com/..." />
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">URL / Link Tujuan <span className="text-rose-500">*</span></label>
+                    <input type="url" name="url" defaultValue={editingData?.url} required disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm disabled:bg-gray-100" placeholder="https://docs.google.com/..." />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 border-t border-gray-100 pt-5">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Visibilitas <span className="text-red-500">*</span></label>
-                      <select name="visibility" defaultValue={editingData?.visibility || "public"} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white outline-none">
-                        <option value="public">Publik</option>
-                        <option value="hidden">Sembunyikan Sementara</option>
-                      </select>
+                <div className="bg-gray-50/80 -mx-6 md:-mx-8 px-6 md:px-8 py-6 border-t border-b border-gray-100">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-5">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Visibilitas <span className="text-rose-500">*</span></label>
+                        <CustomSelect name="visibility" defaultValue={editingData?.visibility || "public"} disabled={isPending} options={[{label: "Publik (Tampil)", value: "public"}, {label: "Sembunyikan", value: "hidden"}]} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Urutan (Sort) <span className="text-rose-500">*</span></label>
+                        <input type="number" name="sort_order" defaultValue={editingData?.sort_order ?? 0} required disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none bg-white shadow-sm disabled:bg-gray-100" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Urutan (Sort) <span className="text-red-500">*</span></label>
-                      <input type="number" name="sort_order" defaultValue={editingData?.sort_order ?? 0} required className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 outline-none" />
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Catatan Internal (Opsional)</label>
+                      <textarea name="note" defaultValue={editingData?.note} rows={4} disabled={isPending} className="w-full px-4 py-3 rounded-lg border border-amber-200 bg-amber-50 text-sm text-gray-900 focus:ring-2 focus:ring-amber-200 outline-none shadow-sm disabled:opacity-70" placeholder="Catatan untuk pengurus (tidak tampil di publik)..."></textarea>
                     </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Catatan Internal (Opsional)</label>
-                    <textarea name="note" defaultValue={editingData?.note} rows={3} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-yellow-50 outline-none" placeholder="Catatan untuk pengurus (tidak tampil di publik)..."></textarea>
                   </div>
                 </div>
               </>
             )}
 
             {/* BUTTON SUBMIT */}
-            <div className="flex justify-end pt-6 border-t border-gray-200 mt-6 gap-3">
-              <button type="button" onClick={() => setIsFormVisible(false)} className="text-gray-500 hover:bg-gray-100 text-sm font-semibold py-2.5 px-6 rounded-lg transition-colors">Batal</button>
-              <button type="submit" disabled={isPending} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-bold py-2.5 px-8 rounded-lg shadow-md transition-all active:scale-95">
-                {isPending ? "Menyimpan..." : (editingData ? "Simpan Perubahan" : "Simpan Tautan")}
+            <div className="flex justify-end pt-2 gap-3 mt-4">
+              <button type="button" onClick={() => setIsFormVisible(false)} disabled={isPending} className="text-gray-500 hover:bg-gray-100 text-sm font-bold py-2.5 px-6 rounded-lg transition-colors border border-transparent">
+                Batal
+              </button>
+              <button type="submit" disabled={isPending} className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-bold py-2.5 px-8 rounded-lg shadow-md transition-all active:scale-95 flex items-center gap-2">
+                {isPending ? "Menyimpan..." : <><Save className="w-4 h-4"/> {editingData ? "Simpan Perubahan" : "Simpan Tautan"}</>}
               </button>
             </div>
           </form>

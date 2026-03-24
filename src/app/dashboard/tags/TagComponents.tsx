@@ -1,84 +1,86 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { createTag, deleteTag, updateTag } from "../../actions/tags";
+import CustomSelect from "../../../components/ui/CustomSelect";
+import { useToast } from "../../../components/ui/Toast";
+import { Plus, Edit3, Trash2, Check, X } from "lucide-react";
 
 // 1. Komponen Form Tambah Tag
 export function CreateTagForm() {
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { addToast } = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleAction = (formData: FormData) => {
     startTransition(async () => {
-      setError(null);
       const res = await createTag(formData);
       
       if (res?.error) {
-        setError(res.error);
+        addToast(res.error, "error");
       } else {
-        // Reset form jika sukses
-        (document.getElementById("form-tag") as HTMLFormElement).reset();
+        addToast("Tag baru berhasil ditambahkan!", "success");
+        formRef.current?.reset();
       }
     });
   };
 
   return (
-    <form id="form-tag" action={handleAction} className="space-y-4">
-      {error && (
-        <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-200">
-          {error}
-        </div>
-      )}
-      
+    <form ref={formRef} action={handleAction} className="space-y-6">
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Label / Tag</label>
+        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Nama Label / Tag <span className="text-rose-500">*</span></label>
         <input
           type="text"
           name="name"
-          placeholder="Contoh: Ramadhan 1447"
+          placeholder="Cth: Ramadhan 1447"
           required
           disabled={isPending}
-          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 disabled:bg-gray-100"
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm text-gray-900 disabled:bg-gray-100 shadow-sm"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Peruntukan (Scope)</label>
-        <select 
-          name="scope" 
-          required
+        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Peruntukan (Scope) <span className="text-rose-500">*</span></label>
+        <CustomSelect 
+          name="scope"
+          defaultValue="post"
           disabled={isPending}
-          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 bg-white disabled:bg-gray-100"
-        >
-          <option value="post">Artikel & Berita (Post)</option>
-          <option value="event">Agenda Kajian (Event)</option>
-          <option value="gallery">Galeri Foto/Video</option>
-        </select>
+          options={[
+            { label: "Artikel & Berita (Post)", value: "post" },
+            { label: "Agenda Kajian (Event)", value: "event" },
+            { label: "Galeri Foto/Video", value: "gallery" }
+          ]}
+        />
       </div>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2.5 rounded-lg transition-colors"
-      >
-        {isPending ? "Menyimpan..." : "+ Tambah Tag"}
-      </button>
+      <div className="pt-2 border-t border-gray-100">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md active:scale-95"
+        >
+          {isPending ? "Menyimpan..." : <><Plus className="w-4 h-4" /> Tambah Tag</>}
+        </button>
+      </div>
     </form>
   );
 }
 
+// 2. Komponen Inline Edit Tag
 export function EditTagForm({ id, name }: { id: number; name: string }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { addToast } = useToast();
 
   if (!isEditing) {
     return (
       <button
+        type="button"
         onClick={() => setIsEditing(true)}
-        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors text-sm font-medium"
+        title="Edit Tag"
+        className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-md border border-gray-200 hover:border-emerald-200 transition-colors shadow-sm"
       >
-        Edit
+        <Edit3 className="w-4 h-4" />
       </button>
     );
   }
@@ -87,17 +89,17 @@ export function EditTagForm({ id, name }: { id: number; name: string }) {
     <form
       action={(formData) => {
         startTransition(async () => {
-          setError(null);
           formData.set("id", String(id));
           const res = await updateTag(formData);
           if (res?.error) {
-            setError(res.error);
-            return;
+            addToast(res.error, "error");
+          } else {
+            addToast("Nama tag berhasil diperbarui!", "success");
+            setIsEditing(false);
           }
-          setIsEditing(false);
         });
       }}
-      className="flex items-center gap-2 justify-end"
+      className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-4"
     >
       <input
         type="text"
@@ -105,37 +107,43 @@ export function EditTagForm({ id, name }: { id: number; name: string }) {
         defaultValue={name}
         required
         disabled={isPending}
-        className="w-40 px-2 py-1.5 rounded-md border border-gray-300 text-sm"
+        autoFocus
+        className="w-36 px-2.5 py-1.5 rounded-md border border-emerald-300 text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-200 shadow-sm"
       />
       <button
         type="submit"
         disabled={isPending}
-        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+        title="Simpan Perubahan"
+        className="p-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-md transition-colors"
       >
-        Simpan
+        <Check className="w-4 h-4" />
       </button>
       <button
         type="button"
         disabled={isPending}
         onClick={() => setIsEditing(false)}
-        className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+        title="Batal"
+        className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
       >
-        Batal
+        <X className="w-4 h-4" />
       </button>
-      {error && <span className="text-xs text-red-600">{error}</span>}
     </form>
   );
 }
 
-export function DeleteTagButton({ id }: { id: number }) {
+// 3. Komponen Hapus Tag
+export function DeleteTagButton({ id, name }: { id: number, name: string }) {
   const [isPending, startTransition] = useTransition();
+  const { addToast } = useToast();
 
   const handleDelete = () => {
-    if (confirm("Yakin ingin menghapus tag ini?")) {
+    if (window.confirm(`Yakin ingin menghapus tag "${name}"?`)) {
       startTransition(async () => {
         const res = await deleteTag(id);
         if (res?.error) {
-          alert(res.error); // Tampilkan alert jika gagal (misal: Tag masih dipakai)
+          addToast(res.error, "error"); // Muncul jika Tag masih digunakan oleh post/event
+        } else {
+          addToast(`Tag ${name} berhasil dihapus.`, "success");
         }
       });
     }
@@ -143,11 +151,13 @@ export function DeleteTagButton({ id }: { id: number }) {
 
   return (
     <button
+      type="button"
       onClick={handleDelete}
       disabled={isPending}
-      className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-md transition-colors text-sm font-medium disabled:opacity-50"
+      title="Hapus Tag"
+      className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50"
     >
-      {isPending ? "Menghapus..." : "Hapus"}
+      <Trash2 className="w-4 h-4" />
     </button>
   );
 }

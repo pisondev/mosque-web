@@ -2,15 +2,19 @@
 
 import { useTransition } from "react";
 import { deletePost, togglePostStatus } from "../../actions/posts";
+import { useToast } from "../../../components/ui/Toast";
+import { Trash2, Globe, FileLock2 } from "lucide-react";
 
-export function DeletePostButton({ id }: { id: number }) {
+export function DeletePostButton({ id, title }: { id: number, title: string }) {
   const [isPending, startTransition] = useTransition();
+  const { addToast } = useToast();
 
   const handleDelete = () => {
-    if (confirm("Yakin ingin menghapus artikel ini permanen?")) {
+    if (window.confirm(`Yakin ingin menghapus artikel "${title}" secara permanen?`)) {
       startTransition(async () => {
         const res = await deletePost(String(id));
-        if (res?.error) alert(res.error);
+        if (res?.error) addToast(res.error, "error");
+        else addToast("Artikel berhasil dihapus.", "success");
       });
     }
   };
@@ -19,22 +23,25 @@ export function DeletePostButton({ id }: { id: number }) {
     <button
       onClick={handleDelete}
       disabled={isPending}
-      className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors text-sm font-medium disabled:opacity-50"
+      title="Hapus Artikel"
+      className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50"
     >
-      {isPending ? "Menghapus..." : "Hapus"}
+      <Trash2 className="w-4 h-4" />
     </button>
   );
 }
 
 export function ToggleStatusButton({ id, currentStatus }: { id: number; currentStatus: string }) {
   const [isPending, startTransition] = useTransition();
+  const { addToast } = useToast();
   const isPublished = currentStatus === "published";
 
   const handleToggle = () => {
     const newStatus = isPublished ? "draft" : "published";
     startTransition(async () => {
       const res = await togglePostStatus(String(id), newStatus);
-      if (res?.error) alert(res.error);
+      if (res?.error) addToast(res.error, "error");
+      else addToast(`Status diubah menjadi ${newStatus.toUpperCase()}`, "success");
     });
   };
 
@@ -42,13 +49,13 @@ export function ToggleStatusButton({ id, currentStatus }: { id: number; currentS
     <button
       onClick={handleToggle}
       disabled={isPending}
-      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all disabled:opacity-50 ${
+      className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider border transition-all active:scale-95 disabled:opacity-50 w-28 ${
         isPublished 
-          ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" 
-          : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+          ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" 
+          : "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200"
       }`}
     >
-      {isPending ? "Updating..." : isPublished ? "🟢 Published" : "⚪ Draft"}
+      {isPending ? "Updating..." : isPublished ? <><Globe className="w-3 h-3"/> Publik</> : <><FileLock2 className="w-3 h-3"/> Draft</>}
     </button>
   );
 }
