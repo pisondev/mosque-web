@@ -1,25 +1,39 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function proxy(request: NextRequest) {
+// WAJIB: Gunakan export default atau named export 'proxy' sesuai standar Next.js 16
+export default function proxy(request: NextRequest) {
   const token = request.cookies.get('mosque_session')?.value;
-  const isAuthPage = request.nextUrl.pathname === '/';
-  const isDashboardPage = request.nextUrl.pathname.startsWith('/dashboard');
-
-  // 🔥 JURUS PAKSA: Tulis mati URL aslinya agar Next.js tidak menebak-nebak ID Docker lagi!
+  const { pathname } = request.nextUrl;
+  
+  // Kunci base URL secara statis agar aman
   const safeBaseUrl = 'https://etakmirweb.tierratie.com';
 
-  if (!token && isDashboardPage) {
+  // 1. Logika Proteksi Halaman (Cegah Infinite Loop)
+  if (!token && pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/', safeBaseUrl));
   }
 
-  if (token && isAuthPage) {
+  if (token && pathname === '/') {
     return NextResponse.redirect(new URL('/dashboard', safeBaseUrl));
   }
 
-  return NextResponse.next();
+  // 2. Injeksi Header: Paksa Next.js mengenali domain aslinya ke dalam sistem internalnya
+  // Ini adalah obat utama agar tidak bocor ke URL Docker ID
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-forwarded-host', 'etakmirweb.tierratie.com');
+  requestHeaders.set('x-forwarded-proto', 'https');
+  requestHeaders.set('host', 'etakmirweb.tierratie.com');
+
+  // Meneruskan request dengan header yang sudah dimanipulasi
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
+// Batasi eksekusi proxy hanya pada halaman yang membutuhkan pengecekan
 export const config = {
   matcher: ['/', '/dashboard/:path*'],
 };
