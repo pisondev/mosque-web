@@ -21,10 +21,6 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
       // 2. Simpan session token ke cookie
       await createSession(res.data.access_token);
       
-      // 3. PENGAMAN DOCKER: Lakukan pengalihan halaman dari sisi Browser (Client)
-      // Ini memastikan URL yang dipakai adalah URL asli di address bar (etakmirweb...)
-      window.location.href = "/dashboard";
-      
     } catch (error: any) {
       if (error?.message === "NEXT_REDIRECT" || error?.digest?.startsWith("NEXT_REDIRECT")) {
         throw error; // Biarkan Next.js yang menangani redirect bawaannya

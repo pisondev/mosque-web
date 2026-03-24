@@ -1,17 +1,19 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation"; // Tambahkan import ini
 
-// Fungsi ini akan dipanggil dari Client Component setelah mendapat JWT dari Go
 export async function createSession(token: string) {
   const cookieStore = await cookies();
   
-  // Simpan token ke dalam HTTP-Only Cookie
   cookieStore.set("mosque_session", token, {
-    httpOnly: true, // Tidak bisa dibaca oleh JavaScript di browser
-    secure: process.env.NODE_ENV === "production", // Wajib HTTPS di mode Production
-    maxAge: 60 * 60 * 24 * 3, // Kedaluwarsa dalam 3 hari (sama seperti backend Go)
-    path: "/", // Cookie berlaku untuk seluruh halaman aplikasi
+    httpOnly: true,
+    secure: true, // Paksa true karena kita menggunakan HTTPS via Cloudflare
+    sameSite: "lax", // Tambahan penting agar cookie aman saat redirect
+    maxAge: 60 * 60 * 24 * 3,
+    path: "/",
   });
 
+  // Eksekusi redirect langsung dari Server Action
+  redirect("/dashboard");
 }
