@@ -1,7 +1,6 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 // Fungsi ini akan dipanggil dari Client Component setelah mendapat JWT dari Go
 export async function createSession(token: string) {
@@ -15,6 +14,4 @@ export async function createSession(token: string) {
     path: "/", // Cookie berlaku untuk seluruh halaman aplikasi
   });
 
-  // Arahkan pengguna ke halaman dashboard
-  redirect("/dashboard");
 }

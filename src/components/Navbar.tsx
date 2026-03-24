@@ -11,16 +11,23 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
     try {
-      // Ambil Base URL dari environment, fallback ke localhost jika kosong
+      // 1. Ambil Base URL dari environment, fallback ke localhost jika kosong
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
       
       const res = await axios.post(`${baseUrl}/api/v1/auth/google`, {
         token: credentialResponse.credential,
       });
+      
+      // 2. Simpan session token ke cookie
       await createSession(res.data.access_token);
+      
+      // 3. PENGAMAN DOCKER: Lakukan pengalihan halaman dari sisi Browser (Client)
+      // Ini memastikan URL yang dipakai adalah URL asli di address bar (etakmirweb...)
+      window.location.href = "/dashboard";
+      
     } catch (error: any) {
       if (error?.message === "NEXT_REDIRECT" || error?.digest?.startsWith("NEXT_REDIRECT")) {
-        throw error; // Biarkan Next.js yang menangani redirect
+        throw error; // Biarkan Next.js yang menangani redirect bawaannya
       }
       
       console.error("Login gagal", error);
@@ -31,7 +38,7 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   return (
     <nav className="absolute top-0 left-0 w-full z-50 bg-transparent py-6 px-8 flex justify-between items-center">
-      {/* ... (Kode JSX di bawahnya biarkan sama persis seperti aslinya) ... */}
+      {/* Logo / Brand */}
       <div className="flex items-center gap-2">
         <span className="text-3xl">🕌</span>
         <span className="text-white font-bold text-xl tracking-wide drop-shadow-md">
@@ -39,6 +46,7 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
         </span>
       </div>
 
+      {/* Menu & Auth */}
       <div className="flex items-center gap-8">
         <a href="#fitur" className="text-white font-medium hover:text-gray-200 drop-shadow-md transition">Fitur</a>
         <a href="/pricing" className="text-white font-medium hover:text-gray-200 drop-shadow-md transition">Paket</a>
