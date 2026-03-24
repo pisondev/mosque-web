@@ -3,7 +3,8 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-const API_URL = "http://localhost:8080/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = `${BASE_URL}/api/v1`;
 
 type TenantMeResponse = {
   status: string;

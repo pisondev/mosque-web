@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 // Konstanta base URL Go Fiber
-const API_URL = "http://localhost:8080/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = `${BASE_URL}/api/v1`;
 
 export async function setupTenantAction(formData: FormData) {
   const name = formData.get("name") as string;
