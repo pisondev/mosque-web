@@ -1,25 +1,25 @@
-"use client";
+import BillingProvider from "../../components/providers/BillingProvider";
+import { getBillingStatus } from "../actions/tenant";
+import DashboardLayoutClient from "../../components/dashboard/DashboardLayoutClient";
+import { ToastProvider } from "../../components/ui/Toast";
 
-import { useState } from "react";
-import Sidebar from "@/components/dashboard/Sidebar"; 
-import Header from "@/components/dashboard/Header";
-import { ToastProvider } from "@/components/ui/Toast"; // <--- TAMBAHKAN IMPORT INI
-
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Ambil data status langganan SaaS dari Backend secara Server-Side
+  const response = await getBillingStatus();
+  const billingData = response?.data;
 
   return (
-    // BUNGKUS DENGAN ToastProvider DI SINI
-    <ToastProvider>
-      <div className="h-screen w-full bg-gray-50 flex font-[family-name:var(--font-geist-sans)] overflow-hidden">
-        <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-        <div className="flex-1 flex flex-col min-w-0 h-full">
-          <Header />
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth">
-            {children}
-          </main>
-        </div>
-      </div>
-    </ToastProvider>
+    <BillingProvider initialData={billingData}>
+      <ToastProvider>
+        {/* Memanggil tampilan UI yang sudah dikembalikan ke CSS lamamu */}
+        <DashboardLayoutClient>
+          {children}
+        </DashboardLayoutClient>
+      </ToastProvider>
+    </BillingProvider>
   );
 }
