@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Building2, CalendarDays, BookOpen, 
   Settings, Banknote, Users, Megaphone, Link2, 
   FileText, Tags, Image as ImageIcon, Globe,
-  Target, CreditCard 
+  Target, CreditCard, LayoutTemplate
 } from "lucide-react";
 
 export const MENU_DATA = [
@@ -13,6 +13,7 @@ export const MENU_DATA = [
       { name: "Ikhtisar", path: "/dashboard", icon: LayoutDashboard }, // Selalu terbuka
       { name: "Profil Masjid", path: "/dashboard/profile", icon: Building2, requiredFeature: "profile" },
       { name: "Susunan Pengurus", path: "/dashboard/management", icon: Users, requiredFeature: "management" },
+      { name: "Tampilan & Paket", path: "/dashboard/templates", icon: LayoutTemplate },
     ]
   },
   {
