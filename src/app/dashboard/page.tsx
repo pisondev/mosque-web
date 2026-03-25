@@ -4,7 +4,7 @@ import Link from "next/link";
 import { 
   Globe, Building2, CalendarDays, Megaphone, 
   Banknote, Users, ArrowUpRight, CheckCircle2, 
-  LayoutDashboard, Sparkles
+  LayoutDashboard, Target
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -70,9 +70,9 @@ export default async function DashboardPage() {
     { name: "Profil Masjid", href: "/dashboard/profile", icon: Building2, desc: "Ubah identitas dan alamat" },
     { name: "Jadwal & Agenda", href: "/dashboard/agenda", icon: CalendarDays, desc: "Atur waktu salat & imam" },
     { name: "Manajemen Event", href: "/dashboard/events", icon: Megaphone, desc: "Publikasi kajian & kegiatan" },
-    { name: "Akun Statis", href: "/dashboard/finance/static-accounts", icon: Banknote, desc: "Kelola rekening & QRIS" },
+    { name: "Program Donasi", href: "/dashboard/finance/campaigns", icon: Target, desc: "Galang dana jamaah" }, // <-- Tambahan Baru
+    { name: "Rekening & QRIS", href: "/dashboard/finance/static-accounts", icon: Banknote, desc: "Kelola rekening manual" },
     { name: "Susunan Pengurus", href: "/dashboard/management", icon: Users, desc: "Daftar takmir & divisi" },
-    { name: "Fasilitas & Layanan", href: "/dashboard/features", icon: Sparkles, desc: "Katalog layanan masjid" },
   ];
 
   return (

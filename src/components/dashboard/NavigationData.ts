@@ -1,7 +1,8 @@
 import { 
   LayoutDashboard, Building2, CalendarDays, BookOpen, 
   Settings, Banknote, Users, Megaphone, Link2, 
-  FileText, Tags, Image as ImageIcon, Globe 
+  FileText, Tags, Image as ImageIcon, Globe,
+  Target, CreditCard // <-- Tambahan ikon baru
 } from "lucide-react";
 
 export const MENU_DATA = [
@@ -15,12 +16,14 @@ export const MENU_DATA = [
     ]
   },
   {
-    title: "Kegiatan & Donasi",
+    // Mengubah sedikit nama grup agar lebih merepresentasikan isinya
+    title: "Kegiatan & Keuangan", 
     icon: CalendarDays,
     items: [
       { name: "Jadwal & Agenda", path: "/dashboard/agenda", icon: CalendarDays },
       { name: "Manajemen Event", path: "/dashboard/events", icon: Megaphone },
-      { name: "Akun Statis", path: "/dashboard/finance/static-accounts", icon: Banknote },
+      { name: "Rekening & QRIS", path: "/dashboard/finance/static-accounts", icon: Banknote },
+      { name: "Program Donasi", path: "/dashboard/finance/campaigns", icon: Target }, // <-- Menu Baru
       { name: "Tautan Publik", path: "/dashboard/links", icon: Link2 },
     ]
   },
@@ -40,6 +43,7 @@ export const MENU_DATA = [
     items: [
       { name: "Fasilitas Layanan", path: "/dashboard/features", icon: Settings },
       { name: "Pengaturan Domain", path: "/dashboard/domains", icon: Globe },
+      { name: "Payment Gateway", path: "/dashboard/finance/settings", icon: CreditCard }, // <-- Menu Baru diletakkan di area Sistem
     ]
   }
 ];

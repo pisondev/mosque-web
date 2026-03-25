@@ -1,37 +1,14 @@
 import CampaignManager from "./CampaignManager";
 import { Target } from "lucide-react";
 import Link from "next/link";
+import { listCampaigns } from "../../../actions/finance";
 
 export const dynamic = "force-dynamic";
 
 export default async function CampaignsPage() {
-  // MOCK DATA
-  const mockCampaigns = [
-    {
-      id: 1,
-      title: "Pembebasan Lahan Parkir Masjid",
-      slug: "pembebasan-lahan-parkir",
-      description: "Penggalangan dana untuk membebaskan lahan seluas 200m2 di sebelah barat masjid untuk area parkir jamaah.",
-      image_url: "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?auto=format&fit=crop&q=80&w=800",
-      target_amount: 150000000,
-      collected_amount: 45500000,
-      start_date: "2026-03-01T00:00:00Z",
-      end_date: "2026-08-31T00:00:00Z",
-      is_active: true
-    },
-    {
-      id: 2,
-      title: "Santunan Yatim & Dhuafa Ramadhan",
-      slug: "santunan-yatim-ramadhan",
-      description: "Program berbagi kebahagiaan bersama 100 anak yatim dan dhuafa di sekitar lingkungan masjid selama bulan suci.",
-      image_url: "https://images.unsplash.com/photo-1593113565694-c6c878e3c1a3?auto=format&fit=crop&q=80&w=800",
-      target_amount: 25000000,
-      collected_amount: 25000000,
-      start_date: "2026-02-15T00:00:00Z",
-      end_date: "2026-03-20T00:00:00Z",
-      is_active: false
-    }
-  ];
+  // Mengambil data asli dari database peladen
+  const response = await listCampaigns(1, 50);
+  const campaigns = Array.isArray(response?.data) ? response.data : [];
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -47,7 +24,7 @@ export default async function CampaignsPage() {
         </div>
       </div>
 
-      <CampaignManager initialCampaigns={mockCampaigns} />
+      <CampaignManager initialCampaigns={campaigns} />
     </div>
   );
 }
