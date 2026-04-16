@@ -32,9 +32,9 @@ export default function UpgradeModal({ isOpen, onClose, featureName }: UpgradeMo
 
         {/* Konten Utama */}
         <div className="p-6 text-center space-y-4">
-          <p className="text-gray-600 text-sm leading-relaxed">
-            Menu <strong className="text-gray-900">"{featureName}"</strong> tidak tersedia pada paket langganan Anda saat ini.
-          </p>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Menu <strong className="text-gray-900">&quot;{featureName}&quot;</strong> tidak tersedia pada paket langganan Anda saat ini.
+            </p>
           
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-left">
             <Crown className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -46,7 +46,7 @@ export default function UpgradeModal({ isOpen, onClose, featureName }: UpgradeMo
 
           <div className="pt-2 flex flex-col gap-2">
             <Link 
-              href="/dashboard/templates" // Nanti kita arahkan ke halaman pilih paket/template
+              href="/dashboard/subscription"
               onClick={onClose}
               className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm"
             >

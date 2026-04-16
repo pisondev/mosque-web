@@ -8,14 +8,23 @@ const BASE_URL = process.env.API_INTERNAL_URL || "http://localhost:8080";
 const API_URL = `${BASE_URL}/api/v1`;
 
 export async function setupTenantAction(formData: FormData) {
-  const name = formData.get("name") as string;
-  const subdomain = formData.get("subdomain") as string;
+  const name = String(formData.get("name") || "").trim();
+  const rawSubdomain = String(formData.get("subdomain") || "");
+  const subdomain = rawSubdomain.trim().toLowerCase();
 
   const cookieStore = await cookies();
   const token = cookieStore.get("mosque_session")?.value;
 
   if (!token) {
     return { error: "Sesi tidak valid atau telah berakhir." };
+  }
+
+  if (!name) {
+    return { error: "Nama resmi wajib diisi." };
+  }
+
+  if (!/^[a-z-]{1,10}$/.test(subdomain)) {
+    return { error: "Subdomain hanya boleh huruf kecil (a-z) dan strip (-), maksimal 10 karakter." };
   }
 
   try {
@@ -31,14 +40,14 @@ export async function setupTenantAction(formData: FormData) {
     const data = await res.json();
 
     if (!res.ok) {
-      // Menangkap error validasi dari Go Fiber
-      return { error: data.message || "Gagal menyimpan data." };
+      const firstFieldError = Array.isArray(data?.errors) ? data.errors[0]?.message : null;
+      return { error: firstFieldError || data?.message || "Gagal menyimpan data." };
     }
 
     // PERBAIKAN 2: Gunakan parameter "layout" agar sapu bersih
     revalidatePath("/dashboard", "layout");
     return { success: true };
-  } catch (error) {
+  } catch {
     return { error: "Terjadi kesalahan jaringan." };
   }
 }
@@ -71,7 +80,7 @@ export async function getBillingStatus() {
     }
 
     return await res.json();
-  } catch (error) {
+  } catch {
     return { status: "error", message: "Terjadi kesalahan jaringan.", data: null };
   }
 }

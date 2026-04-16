@@ -26,7 +26,18 @@ export default async function ProfilePage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <ProfileForm initialData={profile.data} />
+        <ProfileForm initialData={{
+          official_name: profile.data.official_name ?? "",
+          kind: profile.data.kind ?? "masjid",
+          short_name: profile.data.short_name ?? "",
+          province: profile.data.province ?? "",
+          city: profile.data.city ?? "",
+          address_full: profile.data.address_full ?? "",
+          phone_whatsapp: profile.data.phone_whatsapp ?? "",
+          email: profile.data.email ?? "",
+          subdomain: profile.data.subdomain ?? "",
+          header_image_url: profile.data.header_image_url ?? "",
+        }} />
       </div>
     </div>
   );

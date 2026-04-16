@@ -4,6 +4,7 @@ import { useState, useTransition, useRef } from "react";
 import { createTag, deleteTag, updateTag } from "../../actions/tags";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { useToast } from "../../../components/ui/Toast";
+import { useDecisionModal } from "../../../components/ui/DecisionModalProvider";
 import { Plus, Edit3, Trash2, Check, X } from "lucide-react";
 
 // 1. Komponen Form Tambah Tag
@@ -135,24 +136,31 @@ export function EditTagForm({ id, name }: { id: number; name: string }) {
 export function DeleteTagButton({ id, name }: { id: number, name: string }) {
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+  const { confirm } = useDecisionModal();
 
-  const handleDelete = () => {
-    if (window.confirm(`Yakin ingin menghapus tag "${name}"?`)) {
-      startTransition(async () => {
-        const res = await deleteTag(id);
-        if (res?.error) {
-          addToast(res.error, "error"); // Muncul jika Tag masih digunakan oleh post/event
-        } else {
-          addToast(`Tag ${name} berhasil dihapus.`, "success");
-        }
-      });
-    }
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: "Hapus tag?",
+      description: `Tag "${name}" akan dihapus dari daftar.`,
+      confirmLabel: "Hapus Tag",
+      danger: true,
+    });
+    if (!ok) return;
+
+    startTransition(async () => {
+      const res = await deleteTag(id);
+      if (res?.error) {
+        addToast(res.error, "error");
+      } else {
+        addToast(`Tag ${name} berhasil dihapus.`, "success");
+      }
+    });
   };
 
   return (
     <button
       type="button"
-      onClick={handleDelete}
+      onClick={() => void handleDelete()}
       disabled={isPending}
       title="Hapus Tag"
       className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50"

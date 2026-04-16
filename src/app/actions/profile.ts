@@ -22,10 +22,12 @@ type ProfileResponse = {
     official_name?: string;
     kind?: string;
     short_name?: string;
+    province?: string;
     city?: string;
     address_full?: string;
     phone_whatsapp?: string;
     email?: string;
+    header_image_url?: string;
   };
 };
 
@@ -73,10 +75,12 @@ export async function getProfileFormData() {
         official_name: profile?.official_name || tenantMeJson.data.name || "",
         kind: profile?.kind || "masjid",
         short_name: profile?.short_name || "",
+        province: profile?.province || "",
         city: profile?.city || "",
         address_full: profile?.address_full || "",
         phone_whatsapp: profile?.phone_whatsapp || "",
         email: profile?.email || tenantMeJson.data.email || "",
+        header_image_url: profile?.header_image_url || "",
         subdomain: tenantMeJson.data.subdomain || "",
       },
     };
@@ -96,10 +100,12 @@ export async function upsertProfileAction(formData: FormData) {
     official_name: String(formData.get("official_name") || "").trim(),
     kind: String(formData.get("kind") || "").trim(),
     short_name: String(formData.get("short_name") || "").trim(),
+    province: String(formData.get("province") || "").trim(),
     city: String(formData.get("city") || "").trim(),
     address_full: String(formData.get("address_full") || "").trim(),
     phone_whatsapp: String(formData.get("phone_whatsapp") || "").trim(),
     email: String(formData.get("email") || "").trim(),
+    header_image_url: String(formData.get("header_image_url") || "").trim(),
   };
 
   try {

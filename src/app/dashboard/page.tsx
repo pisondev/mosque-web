@@ -38,11 +38,12 @@ async function getDashboardData() {
     const profileData = profileJson?.data;
 
     return {
-      isNeedsSetup: tenantData.name === "Toko Baru" || tenantData.status === "pending",
+      isNeedsSetup: !tenantData.onboarding_completed,
       subdomain: tenantData.subdomain,
       status: tenantData.status,
       // Prioritaskan Nama Profil (masjid_profiles), jika kosong baru pakai nama asli (tenants)
-      displayName: profileData?.official_name || tenantData.name 
+      displayName: profileData?.official_name || tenantData.name,
+      headerImageUrl: profileData?.header_image_url || "",
     };
   } catch (error) {
     console.error("Gagal fetch data dashboard:", error);
@@ -57,7 +58,7 @@ export default async function DashboardPage() {
     redirect("/logout");
   }
 
-  const { isNeedsSetup, subdomain, status, displayName } = dashboardData;
+  const { isNeedsSetup, subdomain, status, displayName, headerImageUrl } = dashboardData;
 
   // 👇 PENERAPAN CAPTIVE ONBOARDING 👇
   // Jika butuh setup, usir dari area ber-sidebar, lempar ke ruangan khusus /setup
@@ -81,6 +82,13 @@ export default async function DashboardPage() {
         
         {/* Banner Hero Section */}
         <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 rounded-2xl p-6 sm:p-10 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          {headerImageUrl && (
+            <div
+              className="absolute inset-0 bg-cover bg-center opacity-[0.16]"
+              style={{ backgroundImage: `url(${headerImageUrl})` }}
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/45 via-emerald-900/35 to-emerald-950/55 pointer-events-none" />
           {/* Dekorasi Latar */}
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-0 left-10 w-40 h-40 bg-yellow-400 opacity-10 rounded-full blur-2xl pointer-events-none"></div>
@@ -88,12 +96,12 @@ export default async function DashboardPage() {
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
               <LayoutDashboard className="w-5 h-5 text-yellow-400" />
-              <span className="text-yellow-400 font-semibold text-sm tracking-wider uppercase">Ikhtisar Panel</span>
+              <span className="text-yellow-400 font-semibold text-sm tracking-wider uppercase" style={{ textShadow: "0 2px 6px rgba(0,0,0,0.45)" }}>Ikhtisar Panel</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 leading-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 leading-tight" style={{ textShadow: "0 3px 10px rgba(0,0,0,0.55)" }}>
               {displayName}
             </h1>
-            <p className="text-emerald-100/80 text-sm max-w-xl">
+            <p className="text-emerald-100/90 text-sm max-w-xl" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.45)" }}>
               Pantau seluruh aktivitas, jadwal ibadah, dan kelola konten website jamaah dengan mudah dan tersentralisasi.
             </p>
           </div>
@@ -127,12 +135,12 @@ export default async function DashboardPage() {
             </div>
             
             <a 
-              href={`https://${subdomain}.mosquesaas.com`} 
+              href={`https://${subdomain}.etakmir.id`} 
               target="_blank" 
               rel="noreferrer"
               className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-sm group"
             >
-              {subdomain}.mosquesaas.com
+              {subdomain}.etakmir.id
               <ArrowUpRight className="w-4 h-4 text-emerald-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
             </a>
           </div>

@@ -2,6 +2,7 @@ import BillingProvider from "../../components/providers/BillingProvider";
 import { getBillingStatus } from "../actions/tenant";
 import DashboardLayoutClient from "../../components/dashboard/DashboardLayoutClient";
 import { ToastProvider } from "../../components/ui/Toast";
+import { DecisionModalProvider } from "../../components/ui/DecisionModalProvider";
 
 export default async function DashboardLayout({
   children,
@@ -15,10 +16,12 @@ export default async function DashboardLayout({
   return (
     <BillingProvider initialData={billingData}>
       <ToastProvider>
-        {/* Memanggil tampilan UI yang sudah dikembalikan ke CSS lamamu */}
-        <DashboardLayoutClient>
-          {children}
-        </DashboardLayoutClient>
+        <DecisionModalProvider>
+          {/* Memanggil tampilan UI yang sudah dikembalikan ke CSS lamamu */}
+          <DashboardLayoutClient>
+            {children}
+          </DashboardLayoutClient>
+        </DecisionModalProvider>
       </ToastProvider>
     </BillingProvider>
   );

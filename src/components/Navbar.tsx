@@ -53,8 +53,7 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await axios.post(`${baseUrl}/api/v1/auth/google`, {
+      const res = await axios.post("/api/v1/auth/google", {
         token: credentialResponse.credential,
       });
       await createSession(res.data.access_token);

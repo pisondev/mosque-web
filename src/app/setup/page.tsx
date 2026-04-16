@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import OnboardingView from "@/components/dashboard/OnBoardingView";
+import { getSubscriptionPlansAction } from "../actions/subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -17,30 +18,39 @@ async function checkTenantStatus() {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (error) {
+  } catch {
     return null;
   }
 }
 
 export default async function SetupPage() {
-  const tenantJson = await checkTenantStatus();
+  const [tenantJson, plansJson] = await Promise.all([
+    checkTenantStatus(),
+    getSubscriptionPlansAction(),
+  ]);
 
   if (!tenantJson) {
     redirect("/logout");
   }
 
-  const { name, status } = tenantJson.data;
-  const isNeedsSetup = name === "Toko Baru" || status === "pending";
+  const { onboarding_completed, onboarding_payment_status } = tenantJson.data;
+  const isNeedsSetup = !onboarding_completed;
 
   if (!isNeedsSetup) {
-    // Jika sudah setup tapi iseng buka /setup, tendang balik ke dashboard
     redirect("/dashboard");
   }
+
+  const plans = plansJson?.data || [];
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-5xl">
-         <OnboardingView />
+         <OnboardingView
+           plans={plans}
+           initialPaymentStatus={onboarding_payment_status}
+           accountEmail={tenantJson.data.email || "Akun tidak diketahui"}
+           accountName={tenantJson.data.name || ""}
+         />
       </div>
     </div>
   );

@@ -3,25 +3,33 @@
 import { useTransition } from "react";
 import { deletePost, togglePostStatus } from "../../actions/posts";
 import { useToast } from "../../../components/ui/Toast";
+import { useDecisionModal } from "../../../components/ui/DecisionModalProvider";
 import { Trash2, Globe, FileLock2 } from "lucide-react";
 
 export function DeletePostButton({ id, title }: { id: number, title: string }) {
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+  const { confirm } = useDecisionModal();
 
-  const handleDelete = () => {
-    if (window.confirm(`Yakin ingin menghapus artikel "${title}" secara permanen?`)) {
-      startTransition(async () => {
-        const res = await deletePost(String(id));
-        if (res?.error) addToast(res.error, "error");
-        else addToast("Artikel berhasil dihapus.", "success");
-      });
-    }
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: "Hapus artikel?",
+      description: `Artikel "${title}" akan dihapus permanen dan tidak bisa dikembalikan.`,
+      confirmLabel: "Hapus Artikel",
+      danger: true,
+    });
+    if (!ok) return;
+
+    startTransition(async () => {
+      const res = await deletePost(String(id));
+      if (res?.error) addToast(res.error, "error");
+      else addToast("Artikel berhasil dihapus.", "success");
+    });
   };
 
   return (
     <button
-      onClick={handleDelete}
+      onClick={() => void handleDelete()}
       disabled={isPending}
       title="Hapus Artikel"
       className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50"

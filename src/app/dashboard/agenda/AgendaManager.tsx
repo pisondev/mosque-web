@@ -10,6 +10,7 @@ import CustomSelect from "../../../components/ui/CustomSelect";
 import CustomDateInput from "../../../components/ui/CustomDateInput";
 import CustomTimeInput from "../../../components/ui/CustomTimeInput";
 import { useToast } from "../../../components/ui/Toast";
+import { useDecisionModal } from "../../../components/ui/DecisionModalProvider";
 import { formatDateID } from "../../../lib/utils";
 import { Clock, CalendarDays, Users, Settings, Plus, Edit3, Trash2, Save, X, MapPin, Map } from "lucide-react";
 
@@ -91,6 +92,7 @@ export default function AgendaManager({
 }) {
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+  const { confirm } = useDecisionModal();
   
   const [activeTab, setActiveTab] = useState<"duties" | "settings" | "special" | "manual">("duties");
   const [editingData, setEditingData] = useState<any | null>(null);
@@ -113,8 +115,14 @@ export default function AgendaManager({
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   };
 
-  const handleDelete = (id: number, label: string, actionFn: any) => {
-    if (!window.confirm(`Yakin ingin menghapus data "${label}"?`)) return;
+  const handleDelete = async (id: number, label: string, actionFn: any) => {
+    const ok = await confirm({
+      title: "Hapus data agenda?",
+      description: `Data "${label}" akan dihapus permanen.`,
+      confirmLabel: "Hapus Data",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = await actionFn(id);
       if (res.error) addToast(res.error, "error");
@@ -179,7 +187,7 @@ export default function AgendaManager({
               <MapPin className="w-5 h-5 text-yellow-400" />
               <p className="text-xl font-bold">{initialSettings.location_mode === 'city' ? initialSettings.city_name : 'Titik Koordinat GPS'}</p>
             </div>
-            <p className="text-xs text-emerald-100/80">Kalkulasi: {initialSettings.calc_method.toUpperCase()} | Zona: {initialSettings.timezone}</p>
+            <p className="text-xs text-emerald-100/80">Kalkulasi: {(initialSettings.calc_method || "default").toUpperCase()} | Zona: {initialSettings.timezone || "Asia/Jakarta"}</p>
           </div>
           
           <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 flex gap-4 md:gap-6 overflow-x-auto">
