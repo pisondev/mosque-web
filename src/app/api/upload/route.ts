@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getServerApiOrigin } from "@/lib/server-api";
 
-const API_INTERNAL = process.env.API_INTERNAL_URL || "http://localhost:8080";
+const API_INTERNAL = getServerApiOrigin();
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();

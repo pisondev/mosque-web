@@ -88,13 +88,11 @@ export default function AuthPageClient() {
       }
 
       if (mode === "reset") {
-        router.push("/dashboard");
-        router.refresh();
+        window.location.assign("/dashboard");
         return;
       }
 
-      router.push("/dashboard");
-      router.refresh();
+      window.location.assign("/dashboard");
     } finally {
       setIsSubmitting(false);
     }
@@ -123,8 +121,7 @@ export default function AuthPageClient() {
         return;
       }
 
-      router.push("/dashboard");
-      router.refresh();
+      window.location.assign("/dashboard");
     } finally {
       setIsSubmitting(false);
     }

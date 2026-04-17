@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getServerApiOrigin } from "@/lib/server-api";
 import { 
   Globe, Building2, CalendarDays, Megaphone, 
   Banknote, Users, ArrowUpRight, CheckCircle2, 
@@ -9,30 +10,31 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const DASHBOARD_FETCH_TIMEOUT_MS = 8000;
+
 async function getDashboardData() {
   const cookieStore = await cookies();
   const token = cookieStore.get("mosque_session")?.value;
   if (!token) return null;
 
   try {
-    const baseUrl = process.env.API_INTERNAL_URL || "http://localhost:8080";
-    
-    // Panggil kedua API secara bersamaan (Parallel Fetching)
-    const [tenantRes, profileRes] = await Promise.all([
-      fetch(`${baseUrl}/api/v1/tenant/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      }),
-      fetch(`${baseUrl}/api/v1/tenant/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      })
+    const baseUrl = getServerApiOrigin();
+
+    const [tenantResult, profileResult] = await Promise.allSettled([
+      fetchJsonWithTimeout(`${baseUrl}/api/v1/tenant/me`, token),
+      fetchJsonWithTimeout(`${baseUrl}/api/v1/tenant/profile`, token),
     ]);
-    
-    if (!tenantRes.ok) return null;
-    
-    const tenantJson = await tenantRes.json();
-    const profileJson = profileRes.ok ? await profileRes.json() : null;
+
+    if (tenantResult.status !== "fulfilled" || !tenantResult.value.ok) {
+      if (tenantResult.status === "rejected") {
+        console.error("Gagal fetch tenant context:", tenantResult.reason);
+      }
+      return null;
+    }
+
+    const tenantJson = tenantResult.value.body;
+    const profileJson =
+      profileResult.status === "fulfilled" && profileResult.value.ok ? profileResult.value.body : null;
 
     const tenantData = tenantJson.data;
     const profileData = profileJson?.data;
@@ -51,6 +53,23 @@ async function getDashboardData() {
   }
 }
 
+async function fetchJsonWithTimeout(url: string, token: string) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DASHBOARD_FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const body = await res.json().catch(() => null);
+    return { ok: res.ok, body };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export default async function DashboardPage() {
   const dashboardData = await getDashboardData();
 
@@ -58,7 +77,7 @@ export default async function DashboardPage() {
     redirect("/logout");
   }
 
-  const { isNeedsSetup, subdomain, status, displayName, headerImageUrl } = dashboardData;
+  const { isNeedsSetup, subdomain, displayName, headerImageUrl } = dashboardData;
 
   // 👇 PENERAPAN CAPTIVE ONBOARDING 👇
   // Jika butuh setup, usir dari area ber-sidebar, lempar ke ruangan khusus /setup

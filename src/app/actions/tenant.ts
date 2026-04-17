@@ -2,9 +2,9 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { getServerApiOrigin } from "@/lib/server-api";
 
-// PERBAIKAN 1: Gunakan API_INTERNAL_URL untuk komunikasi Server-to-Server
-const BASE_URL = process.env.API_INTERNAL_URL || "http://localhost:8080";
+const BASE_URL = getServerApiOrigin();
 const API_URL = `${BASE_URL}/api/v1`;
 
 export async function setupTenantAction(formData: FormData) {

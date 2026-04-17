@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import OnboardingView from "@/components/dashboard/OnBoardingView";
+import { getServerApiOrigin } from "@/lib/server-api";
 import { getSubscriptionPlansAction } from "../actions/subscription";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ async function checkTenantStatus() {
   if (!token) return null;
 
   try {
-    const baseUrl = process.env.API_INTERNAL_URL || "http://localhost:8080";
+    const baseUrl = getServerApiOrigin();
     const res = await fetch(`${baseUrl}/api/v1/tenant/me`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",

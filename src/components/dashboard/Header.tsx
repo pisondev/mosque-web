@@ -45,6 +45,7 @@ export default function Header() {
         <div className="relative w-full">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input 
+            suppressHydrationWarning
             type="text" 
             placeholder="Cari menu navigasi..." 
             value={searchQuery}
@@ -63,6 +64,7 @@ export default function Header() {
             {filteredMenu.length > 0 ? (
               filteredMenu.map((item, idx) => (
                 <button
+                  suppressHydrationWarning
                   key={idx}
                   onClick={() => {
                     router.push(item.path);
@@ -87,6 +89,7 @@ export default function Header() {
       {/* Area Profil User */}
       <div className="flex items-center gap-4 relative" ref={profileRef}>
         <button 
+          suppressHydrationWarning
           onClick={() => setIsProfileOpen(!isProfileOpen)}
           className="flex items-center gap-3 hover:bg-gray-50 p-1 pr-2 rounded-full transition-colors border border-transparent hover:border-gray-200 focus:outline-none"
         >

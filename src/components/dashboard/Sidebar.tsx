@@ -48,14 +48,14 @@ export default function Sidebar({
         
         {/* Header Sidebar */}
         <div className="h-14 flex items-center justify-between px-3 border-b border-gray-100 flex-shrink-0">
-          <button onClick={() => !isOpen && setIsOpen(true)} className={`flex items-center overflow-hidden focus:outline-none ${!isOpen ? "cursor-pointer hover:scale-105 transition-transform" : "cursor-default"}`} title={!isOpen ? "Buka Sidebar" : undefined}>
+          <button suppressHydrationWarning onClick={() => !isOpen && setIsOpen(true)} className={`flex items-center overflow-hidden focus:outline-none ${!isOpen ? "cursor-pointer hover:scale-105 transition-transform" : "cursor-default"}`} title={!isOpen ? "Buka Sidebar" : undefined}>
             <Hexagon className="w-7 h-7 text-emerald-600 fill-emerald-50 flex-shrink-0" />
             <span className={`font-bold tracking-wide ml-2.5 whitespace-nowrap transition-opacity duration-200 ${isOpen ? "opacity-100" : "opacity-0 hidden"}`}>
               <span className="text-yellow-500">e</span><span className="text-emerald-800">TAKMIR</span><span className="text-gray-900 font-black ml-1">ADMIN</span>
             </span>
           </button>
           {isOpen && (
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-md hover:bg-gray-100 flex-shrink-0 animate-in fade-in" title="Tutup Sidebar">
+            <button suppressHydrationWarning onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-md hover:bg-gray-100 flex-shrink-0 animate-in fade-in" title="Tutup Sidebar">
               <PanelLeftClose className="w-5 h-5" />
             </button>
           )}
@@ -70,7 +70,7 @@ export default function Sidebar({
 
               return (
                 <div key={group.title} className="mb-2">
-                  <button onClick={() => toggleGroup(group.title)} title={!isOpen ? group.title : undefined} className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-semibold transition-colors ${hasActiveChild && !isGroupOpen ? "text-emerald-700 bg-emerald-50/70" : "text-gray-600 hover:bg-gray-100"}`}>
+                  <button suppressHydrationWarning onClick={() => toggleGroup(group.title)} title={!isOpen ? group.title : undefined} className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-semibold transition-colors ${hasActiveChild && !isGroupOpen ? "text-emerald-700 bg-emerald-50/70" : "text-gray-600 hover:bg-gray-100"}`}>
                     <div className="flex items-center">
                       <group.icon className="w-5 h-5 flex-shrink-0" strokeWidth={hasActiveChild ? 2.5 : 2} />
                       <span className={`ml-3 whitespace-nowrap transition-all duration-200 ${isOpen ? "opacity-100" : "opacity-0 hidden"}`}>{group.title}</span>
