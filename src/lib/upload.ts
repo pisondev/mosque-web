@@ -1,6 +1,6 @@
 "use client";
 
-export type UploadKind = "header" | "management_photo";
+export type UploadKind = "header" | "management_photo" | "event_poster" | "qris";
 
 export async function uploadImageFile(
   file: File,

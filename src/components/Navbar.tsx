@@ -1,14 +1,10 @@
 "use client";
 
-import { GoogleLogin } from "@react-oauth/google";
-import axios from "axios";
 import { useState, useEffect } from "react";
-import { createSession } from "../app/actions/auth";
 import { Menu, X, Hexagon } from "lucide-react";
 import Link from "next/link";
 
 export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
-  const [isLoading, setIsLoading] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("");
@@ -50,23 +46,6 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
-    setIsLoading(true);
-    try {
-      const res = await axios.post("/api/v1/auth/google", {
-        token: credentialResponse.credential,
-      });
-      await createSession(res.data.access_token);
-    } catch (error: any) {
-      if (error?.message === "NEXT_REDIRECT" || error?.digest?.startsWith("NEXT_REDIRECT")) {
-        throw error;
-      }
-      console.error("Login gagal", error);
-      setIsLoading(false);
-      alert("Gagal masuk. Silakan coba lagi.");
-    }
-  };
-
   const navLinks = [
     { name: "Fitur Dasbor", id: "fitur" },
     { name: "Katalog Website", id: "template" },
@@ -100,19 +79,17 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
           
           <div className="border-l border-gray-300 h-5 mx-2"></div>
 
-          {isLoading ? (
-            <span className="text-sm font-bold text-emerald-600 animate-pulse">Memverifikasi...</span>
-          ) : isLoggedIn ? (
+          {isLoggedIn ? (
             <div className="flex items-center gap-4">
-              <a href="/logout" className="text-sm font-bold text-gray-500 hover:text-rose-600 transition-colors">Logout</a>
+              <Link href="/logout" className="text-sm font-bold text-gray-500 hover:text-rose-600 transition-colors">Logout</Link>
               <Link href="/dashboard" className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-md shadow-emerald-500/20 active:scale-95">
                 Masuk Dasbor
               </Link>
             </div>
           ) : (
-            <div className="scale-95 origin-right">
-              <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => console.log("Google Login Failed")} theme="outline" shape="pill" />
-            </div>
+            <Link href="/auth" className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-md shadow-gray-900/20 active:scale-95">
+              Masuk
+            </Link>
           )}
         </div>
 
@@ -138,15 +115,15 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
             </a>
           ))}
           <div className="pt-4 flex flex-col gap-4">
-            {isLoading ? (
-              <span className="text-sm font-bold text-emerald-600 animate-pulse text-center">Memverifikasi...</span>
-            ) : isLoggedIn ? (
+            {isLoggedIn ? (
               <>
                 <Link href="/dashboard" className="bg-emerald-600 text-white text-center px-5 py-3 rounded-xl font-bold">Masuk Dasbor</Link>
-                <a href="/logout" className="text-center font-bold text-gray-500 py-2">Logout</a>
+                <Link href="/logout" className="text-center font-bold text-gray-500 py-2">Logout</Link>
               </>
             ) : (
-              <div className="flex justify-center"><GoogleLogin onSuccess={handleGoogleSuccess} onError={() => console.log("Google Login Failed")} theme="outline" shape="pill" /></div>
+              <Link href="/auth" className="bg-gray-900 text-white text-center px-5 py-3 rounded-xl font-bold">
+                Masuk
+              </Link>
             )}
           </div>
         </div>

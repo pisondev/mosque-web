@@ -15,10 +15,10 @@ export default function proxy(request: NextRequest) {
 
   // 1. Logika Proteksi Halaman
   if (!token && pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/', baseUrl));
+    return NextResponse.redirect(new URL('/auth', baseUrl));
   }
 
-  if (token && pathname === '/') {
+  if (token && (pathname === '/' || pathname === '/auth')) {
     return NextResponse.redirect(new URL('/dashboard', baseUrl));
   }
 
@@ -42,5 +42,5 @@ export default function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*'],
+  matcher: ['/', '/auth', '/dashboard/:path*'],
 };
