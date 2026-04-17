@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Sparkles, CheckCircle2, Globe, AlertTriangle, LogOut } from "lucide-react";
+import { getPublicPortalPatternExample } from "@/lib/public-portal";
 import OnboardingForm from "../OnboardingForm";
 
 interface PlanItem {
@@ -75,7 +76,7 @@ export default function OnboardingView({
                 <div className="bg-emerald-600/50 p-1 md:p-1.5 rounded-md border border-emerald-500/30">
                   <Globe className="w-3.5 h-3.5 md:w-4 md:h-4 text-yellow-400" />
                 </div>
-                <span className="text-xs md:text-sm font-medium text-emerald-50">Domain publik: nama-masjid.etakmir.id</span>
+                <span className="text-xs md:text-sm font-medium text-emerald-50">Domain publik: {getPublicPortalPatternExample()}</span>
               </div>
             </div>
           </div>

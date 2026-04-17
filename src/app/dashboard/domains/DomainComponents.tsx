@@ -2,6 +2,7 @@
 
 import { useTransition, useRef, useState } from "react";
 import { createDomain, deleteDomain, updateDomainStatus } from "../../actions/domains";
+import { getPublicPortalPatternExample } from "@/lib/public-portal";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { useToast } from "../../../components/ui/Toast";
 import { useDecisionModal } from "../../../components/ui/DecisionModalProvider";
@@ -53,7 +54,7 @@ export function CreateDomainForm() {
           name="hostname"
           required
           disabled={isPending}
-          placeholder={domainType === "subdomain" ? "masjid-alfalah.etakmir.id" : "www.masjidalfalah.id"}
+          placeholder={domainType === "subdomain" ? getPublicPortalPatternExample() : "www.masjidalfalah.id"}
           className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm text-gray-900 disabled:bg-gray-100 shadow-sm font-mono"
         />
         {domainType === "custom_domain" ? (

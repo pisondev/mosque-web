@@ -6,6 +6,7 @@ import { upsertProfileAction } from "../../actions/profile";
 import { CopyToClipboard, ConfirmRedirect } from "../../../components/ui/InteractiveText";
 import { useToast } from "../../../components/ui/Toast";
 import { useDecisionModal } from "../../../components/ui/DecisionModalProvider";
+import { getPublicPortalDisplay, getPublicPortalUrl } from "@/lib/public-portal";
 import { MapPin, Phone, Mail, Globe, Edit3, X, Save, Camera, ChevronDown, Building2 } from "lucide-react";
 import { uploadImageFile } from "../../../lib/upload";
 
@@ -447,8 +448,8 @@ export default function ProfileForm({ initialData }: { initialData: ProfileIniti
                   <div className="pl-3 border-l-2 border-emerald-300">
                     {initialData.subdomain ? (
                       <ConfirmRedirect
-                        url={`https://${initialData.subdomain}.etakmir.id`}
-                        display={`${initialData.subdomain}.etakmir.id`}
+                        url={getPublicPortalUrl(initialData.subdomain)}
+                        display={getPublicPortalDisplay(initialData.subdomain)}
                       />
                     ) : (
                       <span className="text-sm text-gray-900">-</span>
@@ -645,7 +646,7 @@ export default function ProfileForm({ initialData }: { initialData: ProfileIniti
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subdomain Portal Jamaah</label>
                   <input
                     type="text"
-                    value={initialData.subdomain ? `${initialData.subdomain}.etakmir.id` : "Belum diatur"}
+                    value={initialData.subdomain ? getPublicPortalDisplay(initialData.subdomain) : "Belum diatur"}
                     disabled
                     className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed font-mono text-sm"
                   />

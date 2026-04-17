@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getPublicPortalDisplay, getPublicPortalUrl } from "@/lib/public-portal";
 import { getServerApiOrigin } from "@/lib/server-api";
 import { 
   Globe, Building2, CalendarDays, Megaphone, 
@@ -78,6 +79,8 @@ export default async function DashboardPage() {
   }
 
   const { isNeedsSetup, subdomain, displayName, headerImageUrl } = dashboardData;
+  const publicPortalUrl = getPublicPortalUrl(subdomain);
+  const publicPortalDisplay = getPublicPortalDisplay(subdomain);
 
   // 👇 PENERAPAN CAPTIVE ONBOARDING 👇
   // Jika butuh setup, usir dari area ber-sidebar, lempar ke ruangan khusus /setup
@@ -154,12 +157,12 @@ export default async function DashboardPage() {
             </div>
             
             <a 
-              href={`https://${subdomain}.etakmir.id`} 
+              href={publicPortalUrl}
               target="_blank" 
               rel="noreferrer"
               className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 text-emerald-700 px-5 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-sm group"
             >
-              {subdomain}.etakmir.id
+              {publicPortalDisplay}
               <ArrowUpRight className="w-4 h-4 text-emerald-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
             </a>
           </div>

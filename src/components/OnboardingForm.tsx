@@ -9,6 +9,7 @@ import {
   getActiveSubscriptionTransactionAction,
   getSubscriptionTransactionAction,
 } from "../app/actions/subscription";
+import { getPublicPortalPatternExample, getSubdomainInputSuffix } from "@/lib/public-portal";
 import PaymentModal from "./ui/PaymentModal";
 
 interface PlanItem {
@@ -433,10 +434,10 @@ export default function OnboardingForm({
                 className="w-full px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base rounded-l-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500 shadow-sm"
               />
               <span className="inline-flex items-center px-3 md:px-4 rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 text-gray-600 font-medium text-xs md:text-sm">
-                .etakmir.id
+                {getSubdomainInputSuffix()}
               </span>
             </div>
-            <p className="text-[10px] md:text-xs text-gray-500 mt-1.5 md:mt-2 font-medium">Hanya huruf kecil (a-z) dan strip (-), tanpa angka/simbol lain, maksimal 10 karakter.</p>
+            <p className="text-[10px] md:text-xs text-gray-500 mt-1.5 md:mt-2 font-medium">Hanya huruf kecil (a-z) dan strip (-), tanpa angka/simbol lain, maksimal 10 karakter. Portal publik akan diakses sebagai {getPublicPortalPatternExample()}.</p>
           </div>
 
           <button
