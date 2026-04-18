@@ -72,6 +72,7 @@ export default function AuthPageClient() {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(payload),
       });
 
@@ -88,10 +89,12 @@ export default function AuthPageClient() {
       }
 
       if (mode === "reset") {
+        await waitForSessionCookie();
         window.location.assign("/dashboard");
         return;
       }
 
+      await waitForSessionCookie();
       window.location.assign("/dashboard");
     } finally {
       setIsSubmitting(false);
@@ -112,6 +115,7 @@ export default function AuthPageClient() {
       const response = await fetch("/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ token: credentialResponse.credential }),
       });
 
@@ -121,6 +125,7 @@ export default function AuthPageClient() {
         return;
       }
 
+      await waitForSessionCookie();
       window.location.assign("/dashboard");
     } finally {
       setIsSubmitting(false);
@@ -305,6 +310,24 @@ function getEndpoint(mode: AuthMode) {
     default:
       return "";
   }
+}
+
+async function waitForSessionCookie() {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const response = await fetch("/api/auth/session", {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+
+    if (response.ok) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+
+  throw new Error("Sesi login belum siap.");
 }
 
 function normalizeMode(mode: string | null): AuthMode {
