@@ -6,9 +6,22 @@ import { Building2 } from "lucide-react";
 export default async function ProfilePage() {
   const profile = await getProfileFormData();
 
-  if (profile.error || !profile.data) {
-    redirect("/logout");
+  if (profile.unauthorized) {
+    redirect("/auth?mode=login");
   }
+
+  const data = profile.data ?? {
+    official_name: "",
+    kind: "masjid",
+    short_name: "",
+    province: "",
+    city: "",
+    address_full: "",
+    phone_whatsapp: "",
+    email: "",
+    subdomain: "",
+    header_image_url: "",
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
@@ -25,18 +38,24 @@ export default async function ProfilePage() {
         </div>
       </div>
 
+      {profile.error && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          {profile.error}
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <ProfileForm initialData={{
-          official_name: profile.data.official_name ?? "",
-          kind: profile.data.kind ?? "masjid",
-          short_name: profile.data.short_name ?? "",
-          province: profile.data.province ?? "",
-          city: profile.data.city ?? "",
-          address_full: profile.data.address_full ?? "",
-          phone_whatsapp: profile.data.phone_whatsapp ?? "",
-          email: profile.data.email ?? "",
-          subdomain: profile.data.subdomain ?? "",
-          header_image_url: profile.data.header_image_url ?? "",
+          official_name: data.official_name ?? "",
+          kind: data.kind ?? "masjid",
+          short_name: data.short_name ?? "",
+          province: data.province ?? "",
+          city: data.city ?? "",
+          address_full: data.address_full ?? "",
+          phone_whatsapp: data.phone_whatsapp ?? "",
+          email: data.email ?? "",
+          subdomain: data.subdomain ?? "",
+          header_image_url: data.header_image_url ?? "",
         }} />
       </div>
     </div>

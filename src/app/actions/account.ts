@@ -28,7 +28,7 @@ async function getToken() {
 export async function getAccountProfileAction() {
   const token = await getToken();
   if (!token) {
-    return { error: "Sesi tidak valid atau telah berakhir.", data: null as AccountProfileData | null };
+    return { error: "Sesi tidak valid atau telah berakhir.", unauthorized: true, data: null as AccountProfileData | null };
   }
 
   try {
@@ -37,13 +37,16 @@ export async function getAccountProfileAction() {
       cache: "no-store",
     });
     const json = (await res.json().catch(() => null)) as AccountProfileResponse | null;
+    if (res.status === 401 || res.status === 403) {
+      return { error: json?.message || "Sesi tidak valid atau telah berakhir.", unauthorized: true, data: null as AccountProfileData | null };
+    }
     if (!res.ok || json?.status !== "success" || !json.data) {
-      return { error: json?.message || "Gagal memuat profil akun.", data: null as AccountProfileData | null };
+      return { error: json?.message || "Gagal memuat profil akun.", unauthorized: false, data: null as AccountProfileData | null };
     }
 
-    return { error: null, data: json.data };
+    return { error: null, unauthorized: false, data: json.data };
   } catch {
-    return { error: "Terjadi kesalahan jaringan.", data: null as AccountProfileData | null };
+    return { error: "Terjadi kesalahan jaringan.", unauthorized: false, data: null as AccountProfileData | null };
   }
 }
 

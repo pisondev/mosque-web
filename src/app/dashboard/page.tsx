@@ -16,7 +16,7 @@ const DASHBOARD_FETCH_TIMEOUT_MS = 8000;
 async function getDashboardData() {
   const cookieStore = await cookies();
   const token = cookieStore.get("mosque_session")?.value;
-  if (!token) return null;
+  if (!token) return { unauthorized: true as const, error: null, data: null };
 
   try {
     const baseUrl = getServerApiOrigin();
@@ -30,7 +30,11 @@ async function getDashboardData() {
       if (tenantResult.status === "rejected") {
         console.error("Gagal fetch tenant context:", tenantResult.reason);
       }
-      return null;
+      return {
+        unauthorized: false as const,
+        error: "Gagal memuat data dashboard.",
+        data: null,
+      };
     }
 
     const tenantJson = tenantResult.value.body;
@@ -41,16 +45,23 @@ async function getDashboardData() {
     const profileData = profileJson?.data;
 
     return {
-      isNeedsSetup: !tenantData.onboarding_completed,
-      subdomain: tenantData.subdomain,
-      status: tenantData.status,
-      // Prioritaskan Nama Profil (masjid_profiles), jika kosong baru pakai nama asli (tenants)
-      displayName: profileData?.official_name || tenantData.name,
-      headerImageUrl: profileData?.header_image_url || "",
+      unauthorized: false as const,
+      error: null,
+      data: {
+        isNeedsSetup: !tenantData.onboarding_completed,
+        subdomain: tenantData.subdomain,
+        status: tenantData.status,
+        displayName: profileData?.official_name || tenantData.name,
+        headerImageUrl: profileData?.header_image_url || "",
+      },
     };
   } catch (error) {
     console.error("Gagal fetch data dashboard:", error);
-    return null;
+    return {
+      unauthorized: false as const,
+      error: "Terjadi kesalahan saat memuat dashboard.",
+      data: null,
+    };
   }
 }
 
@@ -74,11 +85,22 @@ async function fetchJsonWithTimeout(url: string, token: string) {
 export default async function DashboardPage() {
   const dashboardData = await getDashboardData();
 
-  if (!dashboardData) {
-    redirect("/logout");
+  if (dashboardData.unauthorized) {
+    redirect("/auth?mode=login");
   }
 
-  const { isNeedsSetup, subdomain, displayName, headerImageUrl } = dashboardData;
+  if (!dashboardData.data) {
+    return (
+      <div className="w-full max-w-3xl mx-auto pb-12">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+          <h2 className="text-xl font-bold mb-2">Dashboard belum bisa dimuat</h2>
+          <p className="text-sm">{dashboardData.error || "Terjadi kesalahan tak terduga saat memuat data dashboard."}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { isNeedsSetup, subdomain, displayName, headerImageUrl } = dashboardData.data;
   const publicPortalUrl = getPublicPortalUrl(subdomain);
   const publicPortalDisplay = getPublicPortalDisplay(subdomain);
 

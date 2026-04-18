@@ -41,6 +41,7 @@ export async function getProfileFormData() {
   if (!token) {
     return {
       error: "Sesi tidak valid atau telah berakhir.",
+      unauthorized: true,
       data: null,
     };
   }
@@ -60,9 +61,18 @@ export async function getProfileFormData() {
     const tenantMeJson = (await tenantMeRes.json().catch(() => null)) as TenantMeResponse | null;
     const profileJson = (await profileRes.json().catch(() => null)) as ProfileResponse | null;
 
+    if (tenantMeRes.status === 401 || tenantMeRes.status === 403) {
+      return {
+        error: "Sesi tidak valid atau telah berakhir.",
+        unauthorized: true,
+        data: null,
+      };
+    }
+
     if (!tenantMeRes.ok || tenantMeJson?.status !== "success" || !tenantMeJson?.data) {
       return {
         error: "Gagal memuat data tenant.",
+        unauthorized: false,
         data: null,
       };
     }
@@ -71,6 +81,7 @@ export async function getProfileFormData() {
 
     return {
       error: null,
+      unauthorized: false,
       data: {
         official_name: profile?.official_name || tenantMeJson.data.name || "",
         kind: profile?.kind || "masjid",
@@ -87,6 +98,7 @@ export async function getProfileFormData() {
   } catch {
     return {
       error: "Terjadi kesalahan jaringan.",
+      unauthorized: false,
       data: null,
     };
   }
