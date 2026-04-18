@@ -1,4 +1,5 @@
 import BillingProvider from "../../components/providers/BillingProvider";
+import { getAccountProfileAction } from "../actions/account";
 import { getBillingStatus } from "../actions/tenant";
 import DashboardLayoutClient from "../../components/dashboard/DashboardLayoutClient";
 import { ToastProvider } from "../../components/ui/Toast";
@@ -9,16 +10,19 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Ambil data status langganan SaaS dari Backend secara Server-Side
-  const response = await getBillingStatus();
+  const [response, accountResponse] = await Promise.all([
+    getBillingStatus(),
+    getAccountProfileAction(),
+  ]);
   const billingData = response?.data;
+  const accountData = accountResponse?.data || undefined;
 
   return (
     <BillingProvider initialData={billingData}>
       <ToastProvider>
         <DecisionModalProvider>
           {/* Memanggil tampilan UI yang sudah dikembalikan ke CSS lamamu */}
-          <DashboardLayoutClient>
+          <DashboardLayoutClient account={accountData}>
             {children}
           </DashboardLayoutClient>
         </DecisionModalProvider>

@@ -43,7 +43,7 @@ export async function proxyAuthRequest(
     if (options.setSession && upstream.ok) {
       const token = extractAccessToken(body);
       if (!token) {
-        console.error("[auth-proxy] missing access token in upstream response", { path, upstreamUrl });
+        logAuthProxy("missing access token in upstream response", { path, upstreamUrl });
         return NextResponse.json(
           { status: "error", message: "Token sesi backend tidak ditemukan" },
           { status: 502 },
@@ -55,7 +55,7 @@ export async function proxyAuthRequest(
 
     return NextResponse.json(body, { status: upstream.status });
   } catch (error) {
-    console.error("[auth-proxy] unexpected proxy failure", {
+    logAuthProxy("unexpected proxy failure", {
       path,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -88,7 +88,7 @@ async function proxyToFirstReachableOrigin(path: string, payload: unknown) {
       const body = parseResponseBody(rawBody);
       return { upstream, body, upstreamUrl };
     } catch (error) {
-      console.error("[auth-proxy] upstream request failed", {
+      logAuthProxy("upstream request failed", {
         path,
         upstreamUrl,
         error: error instanceof Error ? error.message : String(error),
@@ -130,4 +130,12 @@ function extractAccessToken(body: Record<string, unknown>) {
 
   const token = (nested as Record<string, unknown>).access_token;
   return typeof token === "string" ? token : "";
+}
+
+function logAuthProxy(message: string, context: Record<string, unknown>) {
+  if (process.env.NODE_ENV !== "development") {
+    return;
+  }
+
+  console.error(`[auth-proxy] ${message}`, context);
 }
