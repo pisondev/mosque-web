@@ -1,13 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  activateFreePlanAction,
-  cancelSubscriptionTransactionAction,
-  createSubscriptionCheckoutAction,
-  getActiveSubscriptionTransactionAction,
-  getSubscriptionTransactionAction,
-} from "../app/actions/subscription";
 import { getPublicPortalPatternExample, getSubdomainInputSuffix } from "@/lib/public-portal";
 import PaymentModal from "./ui/PaymentModal";
 
@@ -67,7 +60,7 @@ export default function OnboardingForm({
 
   useEffect(() => {
     const loadActive = async () => {
-      const res = await getActiveSubscriptionTransactionAction();
+      const res = await fetchJson("/api/subscription/transactions/active");
       if (res?.status !== "success" || !res?.data) {
         return;
       }
@@ -107,7 +100,7 @@ export default function OnboardingForm({
       return;
     }
     const timer = setInterval(async () => {
-      const res = await getSubscriptionTransactionAction(subscriptionTxID);
+      const res = await fetchJson(`/api/subscription/transactions/detail?transactionId=${encodeURIComponent(subscriptionTxID)}`);
       if (res?.status !== "success" || !res?.data) {
         return;
       }
@@ -172,7 +165,7 @@ export default function OnboardingForm({
   async function handleActivateFreePlan() {
     setPaymentError(null);
     setIsPaymentLoading(true);
-    const result = await activateFreePlanAction();
+    const result = await fetchJson("/api/subscription/activate-free", { method: "POST" });
     if (result?.error) {
       setPaymentError(result.error);
       setIsPaymentLoading(false);
@@ -202,7 +195,11 @@ export default function OnboardingForm({
       return;
     }
 
-    const result = await createSubscriptionCheckoutAction(selectedPlan);
+    const result = await fetchJson("/api/subscription/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan_code: selectedPlan }),
+    });
     if (result?.error) {
       setPaymentError(result.error);
       setIsPaymentLoading(false);
@@ -237,7 +234,7 @@ export default function OnboardingForm({
       return;
     }
     setIsPaymentLoading(true);
-    const res = await getSubscriptionTransactionAction(subscriptionTxID);
+    const res = await fetchJson(`/api/subscription/transactions/detail?transactionId=${encodeURIComponent(subscriptionTxID)}`);
     if (res?.status !== "success") {
       setPaymentError(res?.message || "Gagal cek status pembayaran.");
       setIsPaymentLoading(false);
@@ -265,7 +262,11 @@ export default function OnboardingForm({
     }
     setPaymentError(null);
     setIsPaymentLoading(true);
-    const res = await cancelSubscriptionTransactionAction(subscriptionTxID);
+    const res = await fetchJson("/api/subscription/transactions/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transaction_id: subscriptionTxID }),
+    });
     if (res?.error) {
       setPaymentError(res.error);
       setIsPaymentLoading(false);
@@ -483,4 +484,24 @@ export default function OnboardingForm({
       )}
     </form>
   );
+}
+
+async function fetchJson(url: string, init?: RequestInit) {
+  try {
+    const response = await fetch(url, {
+      ...init,
+      credentials: "same-origin",
+    });
+    const body = (await response.json().catch(() => null)) as
+      | { status?: string; message?: string; data?: unknown; error?: string }
+      | null;
+
+    if (!response.ok) {
+      return { error: body?.message || body?.error || "Terjadi kesalahan jaringan." };
+    }
+
+    return body;
+  } catch {
+    return { error: "Terjadi kesalahan jaringan." };
+  }
 }
