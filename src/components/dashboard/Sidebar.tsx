@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { PanelLeftClose, ChevronRight, LogOut, Hexagon, Lock } from "lucide-react";
 import { MENU_DATA } from "./NavigationData";
 import { useBilling } from "../providers/BillingProvider";
 import UpgradeModal from "./UpgradeModal";
+
+type MenuItem = (typeof MENU_DATA)[number]["items"][number];
 
 export default function Sidebar({ 
   isOpen, 
@@ -16,7 +18,6 @@ export default function Sidebar({
   setIsOpen: (val: boolean) => void 
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   
   // Membaca status langganan SaaS
   const { features_unlocked } = useBilling();
@@ -34,7 +35,7 @@ export default function Sidebar({
     );
   };
 
-  const handleLinkClick = (e: React.MouseEvent, item: any, isLocked: boolean) => {
+  const handleLinkClick = (e: React.MouseEvent, item: MenuItem, isLocked: boolean) => {
     if (isLocked) {
       e.preventDefault(); // Hentikan navigasi asli
       setLockedFeatureName(item.name);
@@ -48,14 +49,14 @@ export default function Sidebar({
         
         {/* Header Sidebar */}
         <div className="h-14 flex items-center justify-between px-3 border-b border-gray-100 flex-shrink-0">
-          <button onClick={() => !isOpen && setIsOpen(true)} className={`flex items-center overflow-hidden focus:outline-none ${!isOpen ? "cursor-pointer hover:scale-105 transition-transform" : "cursor-default"}`} title={!isOpen ? "Buka Sidebar" : undefined}>
+          <button suppressHydrationWarning onClick={() => !isOpen && setIsOpen(true)} className={`flex items-center overflow-hidden focus:outline-none ${!isOpen ? "cursor-pointer hover:scale-105 transition-transform" : "cursor-default"}`} title={!isOpen ? "Buka Sidebar" : undefined}>
             <Hexagon className="w-7 h-7 text-emerald-600 fill-emerald-50 flex-shrink-0" />
             <span className={`font-bold tracking-wide ml-2.5 whitespace-nowrap transition-opacity duration-200 ${isOpen ? "opacity-100" : "opacity-0 hidden"}`}>
               <span className="text-yellow-500">e</span><span className="text-emerald-800">TAKMIR</span><span className="text-gray-900 font-black ml-1">ADMIN</span>
             </span>
           </button>
           {isOpen && (
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-md hover:bg-gray-100 flex-shrink-0 animate-in fade-in" title="Tutup Sidebar">
+            <button suppressHydrationWarning onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-md hover:bg-gray-100 flex-shrink-0 animate-in fade-in" title="Tutup Sidebar">
               <PanelLeftClose className="w-5 h-5" />
             </button>
           )}
@@ -70,7 +71,7 @@ export default function Sidebar({
 
               return (
                 <div key={group.title} className="mb-2">
-                  <button onClick={() => toggleGroup(group.title)} title={!isOpen ? group.title : undefined} className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-semibold transition-colors ${hasActiveChild && !isGroupOpen ? "text-emerald-700 bg-emerald-50/70" : "text-gray-600 hover:bg-gray-100"}`}>
+                  <button suppressHydrationWarning onClick={() => toggleGroup(group.title)} title={!isOpen ? group.title : undefined} className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-semibold transition-colors ${hasActiveChild && !isGroupOpen ? "text-emerald-700 bg-emerald-50/70" : "text-gray-600 hover:bg-gray-100"}`}>
                     <div className="flex items-center">
                       <group.icon className="w-5 h-5 flex-shrink-0" strokeWidth={hasActiveChild ? 2.5 : 2} />
                       <span className={`ml-3 whitespace-nowrap transition-all duration-200 ${isOpen ? "opacity-100" : "opacity-0 hidden"}`}>{group.title}</span>
@@ -119,10 +120,10 @@ export default function Sidebar({
 
         {/* Area Logout */}
         <div className="p-3 border-t border-gray-100 flex-shrink-0 bg-white">
-          <a href="/logout" title={!isOpen ? "Keluar Sistem" : undefined} className={`flex items-center text-rose-700 hover:bg-rose-50 rounded-lg font-medium transition-colors overflow-hidden ${isOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}`}>
+          <Link href="/logout" title={!isOpen ? "Keluar Sistem" : undefined} className={`flex items-center text-rose-700 hover:bg-rose-50 rounded-lg font-medium transition-colors overflow-hidden ${isOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}`}>
             <LogOut className={`w-5 h-5 flex-shrink-0 ${isOpen ? "mr-3" : "mr-0"}`} />
             <span className={`text-sm whitespace-nowrap transition-all duration-200 ${isOpen ? "opacity-100" : "opacity-0 hidden"}`}>Keluar Sistem</span>
-          </a>
+          </Link>
         </div>
       </aside>
 

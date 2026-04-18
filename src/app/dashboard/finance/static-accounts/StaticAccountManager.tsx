@@ -1,15 +1,30 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { 
   createStaticPaymentMethod, 
+  listStaticPaymentMethods,
   updateStaticPaymentMethod, 
   deleteStaticPaymentMethod 
 } from "../../../actions/finance";
 import CustomSelect from "../../../../components/ui/CustomSelect";
 import { useToast } from "../../../../components/ui/Toast";
+import { useDecisionModal } from "../../../../components/ui/DecisionModalProvider";
 import { CopyToClipboard, ConfirmRedirect } from "../../../../components/ui/InteractiveText";
-import { Plus, Edit3, Trash2, Save, X, CreditCard, QrCode, ChevronDown } from "lucide-react";
+import { Plus, Edit3, Trash2, Save, X, CreditCard, QrCode, ChevronDown, Upload, ArrowUp, ArrowDown } from "lucide-react";
+import { uploadImageFile } from "../../../../lib/upload";
+
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+const NAME_REGEX = /^[A-Za-z -]+$/;
+
+async function toDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Gagal membaca file gambar."));
+    reader.readAsDataURL(file);
+  });
+}
 
 // ==========================================
 // KOMPONEN CUSTOM DROPDOWN UNTUK TABEL
@@ -75,33 +90,119 @@ const InlineStatusSelect = ({
 export default function StaticAccountManager({ initialChannels }: { initialChannels: any[] }) {
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+  const { confirm, choose } = useDecisionModal();
   
+  const [channels, setChannels] = useState<any[]>(initialChannels);
   const [editingChannel, setEditingChannel] = useState<any | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [channelType, setChannelType] = useState<"bank_account" | "qris">("bank_account");
+  const [qrisPreview, setQrisPreview] = useState<string>("");
+  const [pendingQrisFile, setPendingQrisFile] = useState<File | null>(null);
+  const [isUploadingQris, setIsUploadingQris] = useState<boolean>(false);
+  const [qrisError, setQrisError] = useState<string>("");
+  const [isDirty, setIsDirty] = useState(false);
   
-  const formRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sortedChannels = useMemo(() => [...channels].sort((a,b) => a.sort_order - b.sort_order), [channels]);
+
+  const handleMove = (channelId: number, direction: "up" | "down") => {
+    const index = sortedChannels.findIndex((item) => item.id === channelId);
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || targetIndex < 0 || targetIndex >= sortedChannels.length) return;
+
+    const current = sortedChannels[index];
+    const target = sortedChannels[targetIndex];
+
+    const previousChannels = channels;
+    const optimistic = channels.map((m) => {
+      if (m.id === current.id) return { ...m, sort_order: target.sort_order };
+      if (m.id === target.id) return { ...m, sort_order: current.sort_order };
+      return m;
+    });
+    setChannels(optimistic);
+
+    startTransition(async () => {
+      const first = new FormData();
+      first.append("payload", JSON.stringify({ ...current, sort_order: target.sort_order }));
+
+      const second = new FormData();
+      second.append("payload", JSON.stringify({ ...target, sort_order: current.sort_order }));
+
+      const [res1, res2] = await Promise.all([updateStaticPaymentMethod(first), updateStaticPaymentMethod(second)]);
+      if (res1.error || res2.error) {
+        setChannels(previousChannels);
+        addToast("Gagal menyimpan urutan.", "error");
+        return;
+      }
+      await refreshChannels();
+      addToast("Urutan diperbarui.", "success");
+    });
+  };
+
+  const refreshChannels = async () => {
+    const res = await listStaticPaymentMethods(1, 100);
+    if (res?.status === "success" && Array.isArray(res.data)) {
+      setChannels(res.data);
+    }
+  };
 
   const handleAddNewClick = () => {
     setEditingChannel(null);
     setChannelType("bank_account");
     setIsFormVisible(true);
-    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    setQrisPreview("");
+    setPendingQrisFile(null);
+    setQrisError("");
+    setIsDirty(false);
   };
 
   const handleEditClick = (channel: any) => {
     setEditingChannel(channel);
     setChannelType(channel.channel_type as "bank_account" | "qris");
     setIsFormVisible(true);
-    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    setQrisPreview(channel.qris_image_url || "");
+    setPendingQrisFile(null);
+    setQrisError("");
+    setIsDirty(false);
   };
 
-  const handleDelete = (id: number, label: string) => {
-    if (!window.confirm(`Yakin ingin menghapus metode pembayaran "${label}"?`)) return;
+  const askCloseForm = async () => {
+    if (!isDirty) {
+      setIsFormVisible(false);
+      setEditingChannel(null);
+      return;
+    }
+    const action = await choose({
+      title: "Perubahan belum disimpan",
+      description: "Tutup formulir ini dan buang perubahan yang belum disimpan, atau lanjutkan mengedit.",
+      icon: "warning",
+      actions: [
+        { key: "discard", label: "Buang Perubahan", tone: "danger" },
+        { key: "cancel", label: "Batal", tone: "neutral" },
+      ],
+    });
+    if (action === "discard") {
+      setIsFormVisible(false);
+      setEditingChannel(null);
+    }
+  };
+
+  const handleDelete = async (id: number, label: string) => {
+    const ok = await confirm({
+      title: "Hapus metode pembayaran?",
+      description: `Metode "${label}" akan dihapus dari daftar pembayaran.`,
+      confirmLabel: "Hapus Metode",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = await deleteStaticPaymentMethod(id);
       if (res.error) addToast(res.error, "error");
-      else addToast("Berhasil menghapus metode pembayaran statis.", "success");
+      else {
+        await refreshChannels();
+        addToast("Berhasil menghapus metode pembayaran statis.", "success");
+      }
     });
   };
 
@@ -116,8 +217,28 @@ export default function StaticAccountManager({ initialChannels }: { initialChann
       
       const res = await updateStaticPaymentMethod(submitData);
       if (res.error) addToast("Gagal memperbarui status", "error");
-      else addToast(`Status ${channel.label} diperbarui!`, "success");
+      else {
+        await refreshChannels();
+        addToast(`Status ${channel.label} diperbarui!`, "success");
+      }
     });
+  };
+
+  const handleQrisChange = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setQrisError("File QRIS harus berupa gambar.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setQrisError("Ukuran gambar maksimal 2MB. Jika terlalu besar, kompres gambar terlebih dahulu.");
+      return;
+    }
+    const dataUrl = await toDataUrl(file);
+    setQrisPreview(dataUrl);
+    setPendingQrisFile(file);
+    setQrisError("");
+    setIsDirty(true);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -127,35 +248,79 @@ export default function StaticAccountManager({ initialChannels }: { initialChann
 
     for (const [key, value] of formData.entries()) {
       if (typeof value === 'string' && value.trim() === '') continue;
-      if (key === 'sort_order') {
-        payload[key] = parseInt(value as string, 10) || 0;
-      } else if (key === 'is_public') {
+      if (key === 'is_public') {
         payload[key] = value === 'true';
-      } else {
+      } else if (key !== 'sort_order') {
         payload[key] = value;
       }
     }
 
+    if (!payload.label || payload.label.length > 25 || !NAME_REGEX.test(payload.label)) {
+      addToast("Label maksimal 25 karakter dan hanya boleh huruf, spasi, atau tanda hubung (-).", "error");
+      return;
+    }
+    if (payload.description && String(payload.description).length > 250) {
+      addToast("Catatan tambahan maksimal 250 karakter.", "error");
+      return;
+    }
+
     if (payload.channel_type === "qris") {
+      if (!qrisPreview && !editingChannel?.qris_image_url) {
+        addToast("Silakan unggah gambar QRIS terlebih dahulu.", "error");
+        return;
+      }
       delete payload.bank_name; delete payload.bank_branch; delete payload.account_number; delete payload.account_holder_name;
     } else {
+      if (!payload.bank_name || !NAME_REGEX.test(payload.bank_name) || String(payload.bank_name).length > 25) {
+        addToast("Nama bank maksimal 25 karakter dan hanya boleh huruf, spasi, atau tanda hubung (-).", "error");
+        return;
+      }
+      if (!payload.account_holder_name || !NAME_REGEX.test(payload.account_holder_name) || String(payload.account_holder_name).length > 25) {
+        addToast("Nama pemilik rekening maksimal 25 karakter dan hanya boleh huruf, spasi, atau tanda hubung (-).", "error");
+        return;
+      }
+      if (!payload.account_number || !/^\d+$/.test(String(payload.account_number))) {
+        addToast("Nomor rekening hanya boleh berisi angka.", "error");
+        return;
+      }
       delete payload.qris_image_url; delete payload.merchant_id;
     }
 
-    if (editingChannel) payload.id = editingChannel.id;
-
-    const submitData = new FormData();
-    submitData.append("payload", JSON.stringify(payload));
+    if (editingChannel) {
+      payload.id = editingChannel.id;
+      payload.sort_order = editingChannel.sort_order;
+    } else {
+      payload.sort_order = (Math.max(0, ...channels.map((m) => Number(m.sort_order) || 0)) || 0) + 1;
+    }
 
     startTransition(async () => {
+      if (payload.channel_type === "qris" && pendingQrisFile) {
+        setIsUploadingQris(true);
+        try {
+          const result = await uploadImageFile(pendingQrisFile, "qris", editingChannel?.qris_image_url || undefined);
+          payload.qris_image_url = result.url;
+        } catch (_) {
+          setIsUploadingQris(false);
+          addToast("Gagal mengunggah foto QRIS.", "error");
+          return;
+        }
+        setIsUploadingQris(false);
+      } else if (payload.channel_type === "qris" && editingChannel && qrisPreview === editingChannel.qris_image_url) {
+        payload.qris_image_url = editingChannel.qris_image_url;
+      }
+
+      const submitData = new FormData();
+      submitData.append("payload", JSON.stringify(payload));
+
       const res = editingChannel ? await updateStaticPaymentMethod(submitData) : await createStaticPaymentMethod(submitData);
       if (res.error) {
         addToast(res.error, "error");
       } else {
+        await refreshChannels();
         addToast(`Berhasil ${editingChannel ? "memperbarui" : "menambah"} metode pembayaran.`, "success");
         setIsFormVisible(false);
         setEditingChannel(null);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        setIsDirty(false);
       }
     });
   };
@@ -179,6 +344,7 @@ export default function StaticAccountManager({ initialChannels }: { initialChann
           <table className="w-full text-left border-collapse text-sm">
             <thead className="bg-gray-50/80 text-gray-500 border-b border-gray-100">
               <tr>
+                <th className="px-5 py-3 font-semibold w-28 text-center uppercase tracking-wider text-[11px]">Urutan</th>
                 <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px]">Label / Tujuan</th>
                 <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px] text-center">Metode</th>
                 <th className="px-5 py-3 font-semibold uppercase tracking-wider text-[11px]">Detail Akun</th>
@@ -190,8 +356,33 @@ export default function StaticAccountManager({ initialChannels }: { initialChann
               {initialChannels.length === 0 ? (
                 <tr><td colSpan={5} className="px-5 py-12 text-gray-400 text-center bg-gray-50/30 font-medium">Belum ada metode pembayaran statis terdaftar.</td></tr>
               ) : (
-                initialChannels.sort((a,b) => a.sort_order - b.sort_order).map((channel) => (
+                sortedChannels.map((channel, index) => (
                   <tr key={channel.id} className="hover:bg-emerald-50/30 transition-colors group">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-xs font-bold text-gray-400 w-5 text-center">{channel.sort_order}</span>
+                        <div className="flex flex-col">
+                          <button
+                            type="button"
+                            disabled={index === 0 || isPending}
+                            onClick={() => handleMove(channel.id, "up")}
+                            className="p-1 rounded text-gray-500 hover:text-emerald-700 hover:bg-emerald-100 disabled:opacity-30"
+                            title="Naikkan urutan"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === sortedChannels.length - 1 || isPending}
+                            onClick={() => handleMove(channel.id, "down")}
+                            className="p-1 rounded text-gray-500 hover:text-emerald-700 hover:bg-emerald-100 disabled:opacity-30"
+                            title="Turunkan urutan"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-5 py-4">
                       <p className="font-bold text-gray-900">{channel.label}</p>
                       <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]">{channel.description || "-"}</p>
@@ -225,9 +416,9 @@ export default function StaticAccountManager({ initialChannels }: { initialChann
                        />
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-2">
                         <button onClick={() => handleEditClick(channel)} className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-md border border-gray-200 shadow-sm"><Edit3 className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete(channel.id, channel.label)} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 shadow-sm disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => void handleDelete(channel.id, channel.label)} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 shadow-sm disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -240,16 +431,17 @@ export default function StaticAccountManager({ initialChannels }: { initialChann
 
       {/* BAGIAN FORM ENTRY */}
       {isFormVisible && (
-        <div className="bg-white rounded-2xl border border-emerald-200 shadow-xl overflow-hidden scroll-mt-6 animate-in fade-in slide-in-from-bottom-4" ref={formRef}>
+        <div className="fixed inset-0 z-[150] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-xl w-full max-w-5xl max-h-[92vh] overflow-visible animate-in zoom-in-95 duration-200">
           <div className="bg-emerald-900 px-6 py-4 flex justify-between items-center">
             <div>
               <h3 className="font-bold text-white text-lg">{editingChannel ? "Edit Rekening/QRIS" : "Tambah Rekening Baru"}</h3>
               <p className="text-emerald-200 text-xs mt-0.5">Informasi rekening statis untuk menerima transfer manual.</p>
             </div>
-            <button type="button" onClick={() => setIsFormVisible(false)} className="text-emerald-200 hover:text-white transition-colors bg-emerald-800 hover:bg-emerald-700 p-2 rounded-full"><X className="w-5 h-5" /></button>
+            <button type="button" onClick={() => void askCloseForm()} className="text-emerald-200 hover:text-white transition-colors bg-emerald-800 hover:bg-emerald-700 p-2 rounded-full"><X className="w-5 h-5" /></button>
           </div>
 
-          <form key={editingChannel ? editingChannel.id : "new-channel"} onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
+          <form key={editingChannel ? editingChannel.id : "new-channel"} onSubmit={handleSubmit} onChange={() => setIsDirty(true)} className="p-6 md:p-8 space-y-6 overflow-y-auto max-h-[calc(92vh-80px)]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Label / Peruntukan <span className="text-rose-500">*</span></label>
@@ -272,9 +464,33 @@ export default function StaticAccountManager({ initialChannels }: { initialChann
                   <div><label className="block text-xs font-semibold text-gray-700 mb-1.5">Atas Nama (A.N) <span className="text-rose-500">*</span></label><input type="text" name="account_holder_name" defaultValue={editingChannel?.account_holder_name} required disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm placeholder:text-gray-400" placeholder="Cth: Masjid Jami Al-Ikhlas" /></div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2"><label className="block text-xs font-semibold text-gray-700 mb-1.5">URL Gambar Barcode QRIS <span className="text-rose-500">*</span></label><input type="url" name="qris_image_url" defaultValue={editingChannel?.qris_image_url} required disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm placeholder:text-gray-400" placeholder="https://..." /></div>
-                  <div className="md:col-span-2"><label className="block text-xs font-semibold text-gray-700 mb-1.5">NMID / ID Merchant</label><input type="text" name="merchant_id" defaultValue={editingChannel?.merchant_id} disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm placeholder:text-gray-400" placeholder="Cth: ID123456789" /></div>
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  <div className="w-full md:w-56 space-y-3 flex-shrink-0">
+                    <div className="aspect-[3/4] w-full rounded-xl border-2 border-dashed border-gray-300 bg-white overflow-hidden flex items-center justify-center p-2 relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                      {qrisPreview ? (
+                        <>
+                          <img src={qrisPreview} alt="Preview QRIS" className="w-full h-full object-contain rounded-lg" />
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                            <span className="text-white text-xs font-bold flex items-center gap-1"><Upload className="w-4 h-4" /> Ganti Gambar</span>
+                          </div>
+                        </>
+                      ) : (
+                         <div className="text-gray-400 flex flex-col items-center">
+                           <QrCode className="w-10 h-10 mb-2" />
+                           <span className="text-xs font-semibold text-center">Klik untuk Unggah<br/>Barcode QRIS</span>
+                         </div>
+                      )}
+                    </div>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => void handleQrisChange(event.target.files?.[0])} />
+                    <p className={`text-[11px] text-center px-2 py-1.5 bg-white rounded-md border ${qrisError ? "text-rose-600 border-rose-100" : "text-gray-500 border-gray-200"}`}>{qrisError || "Gambar statis potrait. Maksimal 2MB."}</p>
+                  </div>
+                  <div className="flex-1 w-full space-y-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5 flex items-center gap-2"><QrCode className="w-4 h-4 text-emerald-600"/> NMID / ID Merchant</label>
+                      <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">Opsional. Masukkan ID Merchant (NMID) jika ingin menampilkannya bersamaan dengan gambar QRIS di platform jamaah agar semakin valid.</p>
+                      <input type="text" name="merchant_id" defaultValue={editingChannel?.merchant_id} disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-colors placeholder:text-gray-400 font-mono tracking-wider" placeholder="Cth: ID123456789" />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -282,18 +498,22 @@ export default function StaticAccountManager({ initialChannels }: { initialChann
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-gray-100 pt-6">
               <div className="md:col-span-2"><label className="block text-xs font-semibold text-gray-700 mb-1.5">Catatan Tambahan</label><textarea name="description" defaultValue={editingChannel?.description} rows={4} disabled={isPending} className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm placeholder:text-gray-400" placeholder="Cth: Mohon tambahkan kode unik 001 di akhir..."></textarea></div>
               <div className="space-y-6">
-                <div><label className="block text-xs font-semibold text-gray-700 mb-1.5">Status Tampil</label><CustomSelect name="is_public" defaultValue={editingChannel ? String(editingChannel.is_public) : "true"} options={[{ label: "Publik (Tampil)", value: "true" }, { label: "Sembunyikan", value: "false" }]} disabled={isPending} /></div>
-                <div><label className="block text-xs font-semibold text-gray-700 mb-1.5">Urutan</label><input type="number" name="sort_order" defaultValue={editingChannel?.sort_order ?? 0} required disabled={isPending} className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm" /></div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Status Tampil</label>
+                  <CustomSelect name="is_public" defaultValue={editingChannel ? String(editingChannel.is_public) : "true"} options={[{ label: "Publik (Tampil)", value: "true" }, { label: "Sembunyikan", value: "false" }]} disabled={isPending} />
+                  <p className="text-[10px] text-gray-500 mt-2">Urutan tampil diatur langsung lewat panah geser naik/turun pada tabel daftar di luar.</p>
+                </div>
               </div>
             </div>
 
             <div className="flex justify-end pt-6 border-t border-gray-200 mt-6 gap-3">
-              <button type="button" onClick={() => setIsFormVisible(false)} disabled={isPending} className="text-gray-500 hover:bg-gray-100 text-sm font-bold py-2.5 px-6 rounded-lg transition-colors border border-transparent">Batal</button>
-              <button type="submit" disabled={isPending} className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-bold py-2.5 px-8 rounded-lg shadow-md transition-all active:scale-95 flex items-center gap-2">
-                {isPending ? "Menyimpan..." : <><Save className="w-4 h-4"/> {editingChannel ? "Simpan Perubahan" : "Simpan Rekening"}</>}
+              <button type="button" onClick={() => void askCloseForm()} disabled={isPending} className="text-gray-500 hover:bg-gray-100 text-sm font-bold py-2.5 px-6 rounded-lg transition-colors border border-transparent">Batal</button>
+              <button type="submit" disabled={isPending || isUploadingQris} className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white text-sm font-bold py-2.5 px-8 rounded-lg shadow-md transition-all active:scale-95 flex items-center gap-2">
+                {isUploadingQris ? "Mengunggah QRIS..." : isPending ? "Menyimpan..." : <><Save className="w-4 h-4"/> {editingChannel ? "Simpan Perubahan" : "Simpan Rekening"}</>}
               </button>
             </div>
           </form>
+        </div>
         </div>
       )}
     </div>

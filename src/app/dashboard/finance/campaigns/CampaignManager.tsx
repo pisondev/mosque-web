@@ -6,6 +6,7 @@ import { Plus, Edit3, Trash2, Save, X, Users, Calendar, Image as ImageIcon, Uplo
 import Link from "next/link";
 import { createCampaign, updateCampaign } from "../../../actions/finance";
 import { useToast } from "../../../../components/ui/Toast";
+import { useDecisionModal } from "../../../../components/ui/DecisionModalProvider";
 
 // Format Rupiah Tampilan
 const formatRp = (angka: number) => {
@@ -54,6 +55,7 @@ const ActiveStatusSelect = ({ value, onChange, disabled }: { value: boolean, onC
 export default function CampaignManager({ initialCampaigns }: { initialCampaigns: any[] }) {
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+  const { notify } = useDecisionModal();
 
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
@@ -109,8 +111,13 @@ export default function CampaignManager({ initialCampaigns }: { initialCampaigns
     setImageUrl(previewUrl);
   };
 
-  const handleDeleteAttempt = () => {
-    alert("Program donasi tidak dapat dihapus untuk menjaga riwayat transaksi keuangan. Silakan Edit dan ubah statusnya menjadi 'Tutup / Selesai'.");
+  const handleDeleteAttempt = async () => {
+    await notify({
+      title: "Aksi tidak tersedia",
+      description: "Program donasi tidak dapat dihapus untuk menjaga riwayat transaksi keuangan. Silakan edit program lalu ubah status menjadi 'Tutup / Selesai'.",
+      closeLabel: "Mengerti",
+      icon: "info",
+    });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -227,7 +234,7 @@ export default function CampaignManager({ initialCampaigns }: { initialCampaigns
                   </Link>
                   <div className="flex gap-2">
                     <button onClick={() => handleEditClick(campaign)} disabled={isPending} className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"><Edit3 className="w-4 h-4" /></button>
-                    <button onClick={handleDeleteAttempt} disabled={isPending} className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => void handleDeleteAttempt()} disabled={isPending} className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               </div>

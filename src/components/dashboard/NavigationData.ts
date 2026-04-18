@@ -13,7 +13,8 @@ export const MENU_DATA = [
       { name: "Ikhtisar", path: "/dashboard", icon: LayoutDashboard }, // Selalu terbuka
       { name: "Profil Masjid", path: "/dashboard/profile", icon: Building2, requiredFeature: "profile" },
       { name: "Susunan Pengurus", path: "/dashboard/management", icon: Users, requiredFeature: "management" },
-      { name: "Tampilan & Paket", path: "/dashboard/templates", icon: LayoutTemplate },
+      { name: "Tampilan Website", path: "/dashboard/templates", icon: LayoutTemplate },
+      { name: "Kelola Langganan", path: "/dashboard/subscription", icon: CreditCard },
     ]
   },
   {

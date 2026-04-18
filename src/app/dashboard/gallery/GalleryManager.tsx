@@ -8,6 +8,7 @@ import {
 import CustomSelect from "../../../components/ui/CustomSelect";
 import CustomDateInput from "../../../components/ui/CustomDateInput";
 import { useToast } from "../../../components/ui/Toast";
+import { useDecisionModal } from "../../../components/ui/DecisionModalProvider";
 import { ConfirmRedirect } from "../../../components/ui/InteractiveText";
 import { formatDateID } from "../../../lib/utils";
 import { Plus, Edit3, Trash2, Save, X, Image as ImageIcon, FolderOpen, Video, Camera, Star } from "lucide-react";
@@ -15,6 +16,7 @@ import { Plus, Edit3, Trash2, Save, X, Image as ImageIcon, FolderOpen, Video, Ca
 export default function GalleryManager({ initialAlbums, initialItems }: { initialAlbums: any[], initialItems: any[] }) {
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+  const { confirm } = useDecisionModal();
   
   const [activeTab, setActiveTab] = useState<"albums" | "items">("albums");
   const [editingData, setEditingData] = useState<any | null>(null);
@@ -34,8 +36,14 @@ export default function GalleryManager({ initialAlbums, initialItems }: { initia
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   };
 
-  const handleDelete = (id: number, title: string, type: "album" | "item") => {
-    if (!window.confirm(`Yakin ingin menghapus ${type === "album" ? "Album" : "Media"} "${title}"?`)) return;
+  const handleDelete = async (id: number, title: string, type: "album" | "item") => {
+    const ok = await confirm({
+      title: `Hapus ${type === "album" ? "album" : "media"}?`,
+      description: `${type === "album" ? "Album" : "Media"} "${title}" akan dihapus dari galeri.`,
+      confirmLabel: "Hapus",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = type === "album" ? await deleteGalleryAlbum(id) : await deleteGalleryItem(id);
       if (res.error) addToast(res.error, "error");
@@ -161,7 +169,7 @@ export default function GalleryManager({ initialAlbums, initialItems }: { initia
                       <td className="px-5 py-4 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => handleEditClick(album)} className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-md border border-gray-200 hover:border-emerald-200 transition-colors shadow-sm" title="Edit"><Edit3 className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete(album.id, album.title, "album")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => void handleDelete(album.id, album.title, "album")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -249,7 +257,7 @@ export default function GalleryManager({ initialAlbums, initialItems }: { initia
                         <td className="px-5 py-4 text-right">
                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => handleEditClick(item)} className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-md border border-gray-200 hover:border-emerald-200 transition-colors shadow-sm" title="Edit"><Edit3 className="w-4 h-4" /></button>
-                            <button onClick={() => handleDelete(item.id, `Media #${item.id}`, "item")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                            <button onClick={() => void handleDelete(item.id, `Media #${item.id}`, "item")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
                       </tr>

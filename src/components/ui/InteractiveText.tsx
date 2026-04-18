@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Copy, ExternalLink, Globe } from "lucide-react";
 import { useToast } from "./Toast";
 
@@ -24,11 +24,38 @@ export function CopyToClipboard({ text, display }: { text: string, display?: str
 // Komponen 2: Dialog Buka Link Eksternal
 export function ConfirmRedirect({ url, display }: { url: string, display: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  const resolvedDisplay = useMemo(() => {
+    if (display && display.trim() !== "") {
+      return display;
+    }
+    try {
+      return new URL(url).host;
+    } catch {
+      return url;
+    }
+  }, [display, url]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <span
+        suppressHydrationWarning
+        className="inline-flex items-center gap-2 text-sm font-medium text-gray-900 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200"
+      >
+        {resolvedDisplay}
+      </span>
+    );
+  }
 
   return (
     <>
-      <button type="button" onClick={() => setIsOpen(true)} className="group flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-emerald-600 transition-colors focus:outline-none bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200 hover:border-emerald-200">
-        {display}
+      <button type="button" onClick={() => setIsOpen(true)} suppressHydrationWarning className="group flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-emerald-600 transition-colors focus:outline-none bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200 hover:border-emerald-200">
+        {resolvedDisplay}
         <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-emerald-500 transition-colors" />
       </button>
 

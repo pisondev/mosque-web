@@ -35,10 +35,11 @@ const getMethodStyle = (method: string) => {
   return "bg-gray-50 text-gray-700 border-gray-200";
 };
 
-export default async function CampaignTransactionsPage({ params }: { params: { id: string } }) {
+export default async function CampaignTransactionsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const [campaignRes, transactionsRes] = await Promise.all([
-    getCampaignById(params.id),
-    listCampaignTransactions(params.id, 1, 100)
+    getCampaignById(id),
+    listCampaignTransactions(id, 1, 100)
   ]);
 
   const campaign = campaignRes?.data;

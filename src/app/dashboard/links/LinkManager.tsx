@@ -7,12 +7,14 @@ import {
 } from "../../actions/engagement";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { useToast } from "../../../components/ui/Toast";
+import { useDecisionModal } from "../../../components/ui/DecisionModalProvider";
 import { CopyToClipboard, ConfirmRedirect } from "../../../components/ui/InteractiveText";
 import { Plus, Edit3, Trash2, Save, X, ExternalLink, Hash } from "lucide-react";
 
 export default function LinkManager({ initialSocial, initialExternal }: { initialSocial: any[], initialExternal: any[] }) {
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+  const { confirm } = useDecisionModal();
   
   const [activeTab, setActiveTab] = useState<"social" | "external">("social");
   const [editingData, setEditingData] = useState<any | null>(null);
@@ -31,8 +33,14 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   };
 
-  const handleDelete = (id: number, label: string, type: "social" | "external") => {
-    if (!window.confirm(`Yakin ingin menghapus tautan "${label}"?`)) return;
+  const handleDelete = async (id: number, label: string, type: "social" | "external") => {
+    const ok = await confirm({
+      title: "Hapus tautan?",
+      description: `Tautan "${label}" akan dihapus dari daftar.`,
+      confirmLabel: "Hapus Tautan",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = type === "social" ? await deleteSocialLink(id) : await deleteExternalLink(id);
       if (res.error) addToast(res.error, "error");
@@ -153,7 +161,7 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
                       <td className="px-5 py-4 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => handleEditClick(link)} className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-md border border-gray-200 hover:border-emerald-200 transition-colors shadow-sm" title="Edit"><Edit3 className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete(link.id, link.platform, "social")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => void handleDelete(link.id, link.platform, "social")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -215,7 +223,7 @@ export default function LinkManager({ initialSocial, initialExternal }: { initia
                       <td className="px-5 py-4 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => handleEditClick(link)} className="p-2 bg-white hover:bg-emerald-50 text-emerald-600 rounded-md border border-gray-200 hover:border-emerald-200 transition-colors shadow-sm" title="Edit"><Edit3 className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete(link.id, link.label, "external")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => void handleDelete(link.id, link.label, "external")} disabled={isPending} className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>

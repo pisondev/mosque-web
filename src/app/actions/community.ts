@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const BASE_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const API_URL = `${BASE_URL}/api/v1`;
 
 async function getToken() {
@@ -228,9 +228,10 @@ export async function createManagementMember(formData: FormData) {
   const payload = JSON.parse(String(formData.get("payload") || "{}"));
   try {
     const res = await fetch(`${API_URL}/tenant/management-members`, { method: "POST", headers, body: JSON.stringify(payload) });
-    if (!res.ok) return { error: "Gagal menambah pengurus" };
+    const data = await res.json().catch(() => null);
+    if (!res.ok) return { error: data?.message || "Gagal menambah pengurus" };
     revalidatePath("/dashboard/management");
-    return { success: true };
+    return { success: true, data: data?.data || null };
   } catch { return { error: "Terjadi kesalahan jaringan" }; }
 }
 
@@ -258,9 +259,10 @@ export async function updateManagementMember(formData: FormData) {
       headers, 
       body: JSON.stringify(payload) 
     });
-    if (!res.ok) return { error: "Gagal memperbarui data pengurus" };
+    const data = await res.json().catch(() => null);
+    if (!res.ok) return { error: data?.message || "Gagal memperbarui data pengurus" };
     revalidatePath("/dashboard/management");
-    return { success: true };
+    return { success: true, data: data?.data || null };
   } catch { 
     return { error: "Terjadi kesalahan jaringan" }; 
   }

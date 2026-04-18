@@ -2,8 +2,10 @@
 
 import { useTransition, useRef, useState } from "react";
 import { createDomain, deleteDomain, updateDomainStatus } from "../../actions/domains";
+import { getPublicPortalPatternExample } from "@/lib/public-portal";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { useToast } from "../../../components/ui/Toast";
+import { useDecisionModal } from "../../../components/ui/DecisionModalProvider";
 import { Plus, Trash2 } from "lucide-react";
 
 // --- 1. KOMPONEN FORM TAMBAH DOMAIN ---
@@ -52,7 +54,7 @@ export function CreateDomainForm() {
           name="hostname"
           required
           disabled={isPending}
-          placeholder={domainType === "subdomain" ? "masjid-alfalah.mosquesaas.com" : "www.masjidalfalah.id"}
+          placeholder={domainType === "subdomain" ? getPublicPortalPatternExample() : "www.masjidalfalah.id"}
           className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm text-gray-900 disabled:bg-gray-100 shadow-sm font-mono"
         />
         {domainType === "custom_domain" ? (
@@ -115,9 +117,16 @@ export function DomainStatusControl({ id, currentStatus, hostname }: { id: numbe
 export function DeleteDomainButton({ id, hostname }: { id: number, hostname: string }) {
   const [isPending, startTransition] = useTransition();
   const { addToast } = useToast();
+  const { confirm } = useDecisionModal();
 
-  const handleDelete = () => {
-    if (!window.confirm(`Yakin ingin mencabut domain "${hostname}" dari sistem?`)) return;
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: "Hapus domain?",
+      description: `Domain "${hostname}" akan dicabut dari sistem dan tidak lagi aktif.`,
+      confirmLabel: "Hapus Domain",
+      danger: true,
+    });
+    if (!ok) return;
     
     startTransition(async () => {
       const res = await deleteDomain(id);
@@ -132,7 +141,7 @@ export function DeleteDomainButton({ id, hostname }: { id: number, hostname: str
   return (
     <button
       type="button"
-      onClick={handleDelete}
+      onClick={() => void handleDelete()}
       disabled={isPending}
       title="Hapus Domain"
       className="p-2 bg-white hover:bg-rose-50 text-rose-600 rounded-md border border-gray-200 hover:border-rose-200 transition-colors shadow-sm disabled:opacity-50"

@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import type { AccountProfileData } from "@/app/actions/account";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
 export default function DashboardLayoutClient({
+  account,
   children,
 }: {
+  account?: AccountProfileData;
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -17,7 +20,7 @@ export default function DashboardLayoutClient({
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        <Header />
+        <Header account={account} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth">
           {children}
         </main>

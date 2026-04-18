@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, LogOut, ChevronDown, Hexagon } from "lucide-react";
+import type { AccountProfileData } from "@/app/actions/account";
+import { Search, LogOut, ChevronDown, Hexagon, Settings } from "lucide-react";
 import { FLAT_MENU } from "./NavigationData";
 
-export default function Header() {
+export default function Header({ account }: { account?: AccountProfileData }) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -27,6 +29,11 @@ export default function Header() {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const displayName = account?.display_name?.trim() || "Admin Takmir";
+  const email = account?.email?.trim() || "akun@etakmir.local";
+  const avatarUrl = account?.avatar_url?.trim() || "";
+  const avatarInitial = (displayName[0] || email[0] || "A").toUpperCase();
+
   return (
     <header className="h-14 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 shadow-sm sticky top-0 z-30">
       
@@ -45,6 +52,7 @@ export default function Header() {
         <div className="relative w-full">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input 
+            suppressHydrationWarning
             type="text" 
             placeholder="Cari menu navigasi..." 
             value={searchQuery}
@@ -63,6 +71,7 @@ export default function Header() {
             {filteredMenu.length > 0 ? (
               filteredMenu.map((item, idx) => (
                 <button
+                  suppressHydrationWarning
                   key={idx}
                   onClick={() => {
                     router.push(item.path);
@@ -87,16 +96,21 @@ export default function Header() {
       {/* Area Profil User */}
       <div className="flex items-center gap-4 relative" ref={profileRef}>
         <button 
+          suppressHydrationWarning
           onClick={() => setIsProfileOpen(!isProfileOpen)}
           className="flex items-center gap-3 hover:bg-gray-50 p-1 pr-2 rounded-full transition-colors border border-transparent hover:border-gray-200 focus:outline-none"
         >
           <div className="hidden sm:flex flex-col text-right">
-            <span className="text-xs font-semibold text-gray-700">Pison Golda Mountera</span>
-            <span className="text-[10px] text-gray-500">pison.gm.dev@gmail.com</span>
+            <span className="text-xs font-semibold text-gray-700">{displayName}</span>
+            <span className="text-[10px] text-gray-500">{email}</span>
           </div>
-          <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold shadow-sm">
-            P
-          </div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={displayName} className="h-8 w-8 rounded-full object-cover shadow-sm" />
+          ) : (
+            <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold shadow-sm">
+              {avatarInitial}
+            </div>
+          )}
           <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
         </button>
 
@@ -104,11 +118,14 @@ export default function Header() {
         {isProfileOpen && (
           <div className="absolute top-12 right-0 w-48 bg-white border border-gray-200 shadow-xl rounded-lg py-1 z-50 animate-in fade-in slide-in-from-top-2">
             <div className="px-4 py-2 border-b border-gray-100 sm:hidden">
-              <p className="text-xs font-semibold text-gray-700 truncate">pison.gm.dev@gmail.com</p>
+              <p className="text-xs font-semibold text-gray-700 truncate">{email}</p>
             </div>
-            <a href="/logout" className="flex items-center gap-2 px-4 py-2 text-sm text-rose-700 hover:bg-rose-50 font-medium transition-colors">
+            <Link href="/dashboard/account" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+              <Settings className="w-4 h-4" /> Setup Profile
+            </Link>
+            <Link href="/logout" className="flex items-center gap-2 px-4 py-2 text-sm text-rose-700 hover:bg-rose-50 font-medium transition-colors">
               <LogOut className="w-4 h-4" /> Keluar
-            </a>
+            </Link>
           </div>
         )}
       </div>

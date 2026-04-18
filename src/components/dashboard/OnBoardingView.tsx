@@ -1,9 +1,42 @@
-import { Building2, Sparkles, CheckCircle2, Globe, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, CheckCircle2, Globe, AlertTriangle, LogOut } from "lucide-react";
+import { getPublicPortalPatternExample } from "@/lib/public-portal";
 import OnboardingForm from "../OnboardingForm";
 
-export default function OnboardingView() {
+interface PlanItem {
+  plan_code: string;
+  name: string;
+  price: number;
+  currency: string;
+  features_unlocked: string[];
+  attribution_enabled: boolean;
+}
+
+export default function OnboardingView({
+  plans,
+  initialPaymentStatus,
+  accountEmail,
+  accountName,
+}: {
+  plans: PlanItem[];
+  initialPaymentStatus: string;
+  accountEmail: string;
+  accountName: string;
+}) {
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center py-6 md:py-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="w-full max-w-5xl mb-4 flex items-center justify-between gap-3 px-1">
+        <div className="text-xs text-gray-600 bg-white/90 border border-gray-200 rounded-lg px-3 py-2">
+          <p className="font-semibold text-gray-800">Setup akun</p>
+          <p className="truncate max-w-[280px] sm:max-w-[420px]">{accountName ? `${accountName} - ` : ""}{accountEmail}</p>
+        </div>
+        <Link
+          href="/logout"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors"
+        >
+          <LogOut className="w-3.5 h-3.5" /> Keluar
+        </Link>
+      </div>
       
       {/* 1. DESKTOP DIBUAT LEBIH LEBAR (max-w-5xl) */}
       <div className="w-full max-w-5xl relative mx-auto">
@@ -43,7 +76,7 @@ export default function OnboardingView() {
                 <div className="bg-emerald-600/50 p-1 md:p-1.5 rounded-md border border-emerald-500/30">
                   <Globe className="w-3.5 h-3.5 md:w-4 md:h-4 text-yellow-400" />
                 </div>
-                <span className="text-xs md:text-sm font-medium text-emerald-50">Manajemen agenda & donasi terpusat</span>
+                <span className="text-xs md:text-sm font-medium text-emerald-50">Domain publik: {getPublicPortalPatternExample()}</span>
               </div>
             </div>
           </div>
@@ -59,7 +92,7 @@ export default function OnboardingView() {
 
             <div className="bg-gray-50/50 p-1 rounded-xl md:rounded-2xl border border-gray-100">
               <div className="bg-white p-4 md:p-6 rounded-lg md:rounded-xl border border-gray-100 shadow-sm">
-                <OnboardingForm />
+                <OnboardingForm plans={plans} initialPaymentStatus={initialPaymentStatus} />
               </div>
             </div>
             
