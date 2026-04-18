@@ -109,7 +109,7 @@ export default function AuthPageClient() {
     setErrorMessage("");
 
     try {
-      const response = await fetch("/api/v1/auth/google", {
+      const response = await fetch("/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: credentialResponse.credential }),
@@ -295,13 +295,13 @@ function tabClassName(isActive: boolean) {
 function getEndpoint(mode: AuthMode) {
   switch (mode) {
     case "login":
-      return "/api/v1/auth/login";
+      return "/api/auth/login";
     case "register":
-      return "/api/v1/auth/register";
+      return "/api/auth/register";
     case "forgot":
-      return "/api/v1/auth/forgot-password";
+      return "/api/auth/forgot-password";
     case "reset":
-      return "/api/v1/auth/reset-password";
+      return "/api/auth/reset-password";
     default:
       return "";
   }
