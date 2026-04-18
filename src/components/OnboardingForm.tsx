@@ -160,20 +160,17 @@ export default function OnboardingForm({
     formData.set("subdomain", normalizedSubdomain);
 
     try {
-      const response = await fetch("/api/tenant/setup", {
+      const result = await fetchJson<Record<string, never>>("/api/tenant/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
         body: JSON.stringify({
           name: String(formData.get("name") || "").trim(),
           subdomain: normalizedSubdomain,
         }),
       });
 
-      const result = (await response.json().catch(() => null)) as { message?: string; error?: string } | null;
-
-      if (!response.ok) {
-        setError(result?.message || result?.error || "Gagal menyimpan data.");
+      if (!isSuccessResponse(result)) {
+        setError(result.message || result.error || "Gagal menyimpan data.");
         setIsLoading(false);
         return;
       }
