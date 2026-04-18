@@ -13,6 +13,29 @@ interface PlanItem {
   attribution_enabled: boolean;
 }
 
+interface SubscriptionTransaction {
+  transaction_id?: string;
+  plan_code?: string;
+  status?: string;
+  payment_url?: string | null;
+  order_id?: string;
+  amount?: number | string;
+  expired_at?: string;
+  created_at?: string;
+}
+
+type ApiSuccess<T> = {
+  status: "success";
+  data: T;
+  message?: string;
+};
+
+type ApiError = {
+  status?: string;
+  message?: string;
+  error?: string;
+};
+
 const SUBDOMAIN_REGEX = /^[a-z-]{1,10}$/;
 
 function sanitizeSubdomain(value: string) {
@@ -60,8 +83,8 @@ export default function OnboardingForm({
 
   useEffect(() => {
     const loadActive = async () => {
-      const res = await fetchJson("/api/subscription/transactions/active");
-      if (res?.status !== "success" || !res?.data) {
+      const res = await fetchJson<SubscriptionTransaction>("/api/subscription/transactions/active");
+      if (!isSuccessResponse(res) || !res.data) {
         return;
       }
       setSubscriptionTxID(res.data.transaction_id || "");
@@ -100,8 +123,8 @@ export default function OnboardingForm({
       return;
     }
     const timer = setInterval(async () => {
-      const res = await fetchJson(`/api/subscription/transactions/detail?transactionId=${encodeURIComponent(subscriptionTxID)}`);
-      if (res?.status !== "success" || !res?.data) {
+      const res = await fetchJson<SubscriptionTransaction>(`/api/subscription/transactions/detail?transactionId=${encodeURIComponent(subscriptionTxID)}`);
+      if (!isSuccessResponse(res) || !res.data) {
         return;
       }
       setSubscriptionStatus(res.data.status || "pending");
@@ -165,9 +188,9 @@ export default function OnboardingForm({
   async function handleActivateFreePlan() {
     setPaymentError(null);
     setIsPaymentLoading(true);
-    const result = await fetchJson("/api/subscription/activate-free", { method: "POST" });
-    if (result?.error) {
-      setPaymentError(result.error);
+    const result = await fetchJson<Record<string, never>>("/api/subscription/activate-free", { method: "POST" });
+    if (!isSuccessResponse(result)) {
+      setPaymentError(result.message || result.error || "Gagal mengaktifkan paket free.");
       setIsPaymentLoading(false);
       return;
     }
@@ -195,18 +218,18 @@ export default function OnboardingForm({
       return;
     }
 
-    const result = await fetchJson("/api/subscription/checkout", {
+    const result = await fetchJson<SubscriptionTransaction>("/api/subscription/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan_code: selectedPlan }),
     });
-    if (result?.error) {
-      setPaymentError(result.error);
+    if (!isSuccessResponse(result)) {
+      setPaymentError(result.message || result.error || "Gagal membuat checkout.");
       setIsPaymentLoading(false);
       return;
     }
 
-    const tx = result?.data;
+    const tx = result.data;
     if (!tx?.transaction_id || !tx?.payment_url) {
       setPaymentError("Checkout gagal diproses.");
       setIsPaymentLoading(false);
@@ -234,14 +257,15 @@ export default function OnboardingForm({
       return;
     }
     setIsPaymentLoading(true);
-    const res = await fetchJson(`/api/subscription/transactions/detail?transactionId=${encodeURIComponent(subscriptionTxID)}`);
-    if (res?.status !== "success") {
+    const res = await fetchJson<SubscriptionTransaction>(`/api/subscription/transactions/detail?transactionId=${encodeURIComponent(subscriptionTxID)}`);
+    if (!isSuccessResponse(res)) {
       setPaymentError(res?.message || "Gagal cek status pembayaran.");
       setIsPaymentLoading(false);
       return;
     }
-    setSubscriptionStatus(res.data.status);
-    setHasActiveTransaction(res.data.status === "pending");
+    const status = res.data.status || "pending";
+    setSubscriptionStatus(status);
+    setHasActiveTransaction(status === "pending");
     if (res.data.payment_url) {
       setActivePaymentURL(res.data.payment_url);
     }
@@ -262,13 +286,13 @@ export default function OnboardingForm({
     }
     setPaymentError(null);
     setIsPaymentLoading(true);
-    const res = await fetchJson("/api/subscription/transactions/cancel", {
+    const res = await fetchJson<Record<string, never>>("/api/subscription/transactions/cancel", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transaction_id: subscriptionTxID }),
     });
-    if (res?.error) {
-      setPaymentError(res.error);
+    if (!isSuccessResponse(res)) {
+      setPaymentError(res.message || res.error || "Gagal membatalkan transaksi.");
       setIsPaymentLoading(false);
       return;
     }
@@ -486,22 +510,29 @@ export default function OnboardingForm({
   );
 }
 
-async function fetchJson(url: string, init?: RequestInit) {
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<ApiSuccess<T> | ApiError> {
   try {
     const response = await fetch(url, {
       ...init,
       credentials: "same-origin",
     });
-    const body = (await response.json().catch(() => null)) as
-      | { status?: string; message?: string; data?: unknown; error?: string }
-      | null;
+    const body = (await response.json().catch(() => null)) as ApiSuccess<T> | ApiError | null;
 
     if (!response.ok) {
-      return { error: body?.message || body?.error || "Terjadi kesalahan jaringan." };
+      const errorBody = body as ApiError | null;
+      return { error: errorBody?.message || errorBody?.error || "Terjadi kesalahan jaringan." };
+    }
+
+    if (!body) {
+      return { error: "Respon server tidak valid." };
     }
 
     return body;
   } catch {
     return { error: "Terjadi kesalahan jaringan." };
   }
+}
+
+function isSuccessResponse<T>(response: ApiSuccess<T> | ApiError): response is ApiSuccess<T> {
+  return response.status === "success";
 }
