@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload || {}),
-  });
+  }, request);
 
   if (result.errorResponse) {
     return result.errorResponse;

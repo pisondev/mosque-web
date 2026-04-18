@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
   const result = await proxyWithSession(`/api/v1/tenant/subscription/transactions/${transactionId}/cancel`, {
     method: "POST",
-  });
+  }, request);
 
   if (result.errorResponse) {
     return result.errorResponse;

@@ -4,9 +4,14 @@ import { getServerApiOrigin } from "@/lib/server-api";
 
 const API_INTERNAL = getServerApiOrigin();
 
-export async function proxyWithSession(path: string, init: RequestInit = {}) {
+function extractFallbackToken(request?: Request) {
+  const token = request?.headers.get("x-session-token")?.trim();
+  return token || "";
+}
+
+export async function proxyWithSession(path: string, init: RequestInit = {}, request?: Request) {
   const cookieStore = await cookies();
-  const token = cookieStore.get("mosque_session")?.value;
+  const token = cookieStore.get("mosque_session")?.value || extractFallbackToken(request);
 
   if (!token) {
     return {

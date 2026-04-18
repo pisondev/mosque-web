@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ status: "error", message: "transactionId wajib diisi." }, { status: 400 });
   }
 
-  const result = await proxyWithSession(`/api/v1/tenant/subscription/transactions/${transactionId}`);
+  const result = await proxyWithSession(`/api/v1/tenant/subscription/transactions/${transactionId}`, {}, request);
 
   if (result.errorResponse) {
     return result.errorResponse;

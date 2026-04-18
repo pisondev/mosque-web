@@ -512,9 +512,17 @@ export default function OnboardingForm({
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<ApiSuccess<T> | ApiError> {
   try {
+    const onboardingToken = typeof window !== "undefined"
+      ? window.sessionStorage.getItem("etakmir_onboarding_token") || ""
+      : "";
+
     const response = await fetch(url, {
       ...init,
       credentials: "same-origin",
+      headers: {
+        ...(init?.headers || {}),
+        ...(onboardingToken ? { "X-Session-Token": onboardingToken } : {}),
+      },
     });
     const body = (await response.json().catch(() => null)) as ApiSuccess<T> | ApiError | null;
 

@@ -12,6 +12,9 @@ type ApiResponse = {
   status?: string;
   message?: string;
   errors?: Array<{ field?: string; message?: string }>;
+  data?: {
+    access_token?: string;
+  };
 };
 
 export default function AuthPageClient() {
@@ -88,6 +91,8 @@ export default function AuthPageClient() {
         return;
       }
 
+      rememberOnboardingToken(body?.data?.access_token);
+
       if (mode === "reset") {
         await waitForSessionCookie();
         window.location.assign("/dashboard");
@@ -125,6 +130,7 @@ export default function AuthPageClient() {
         return;
       }
 
+      rememberOnboardingToken(body?.data?.access_token);
       await waitForSessionCookie();
       window.location.assign("/dashboard");
     } finally {
@@ -328,6 +334,14 @@ async function waitForSessionCookie() {
   }
 
   throw new Error("Sesi login belum siap.");
+}
+
+function rememberOnboardingToken(token?: string) {
+  if (!token || typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.setItem("etakmir_onboarding_token", token);
 }
 
 function normalizeMode(mode: string | null): AuthMode {
