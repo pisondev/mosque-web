@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { setupTenantAction } from "../app/actions/tenant";
 import {
   activateFreePlanAction,
   cancelSubscriptionTransactionAction,
@@ -92,7 +91,6 @@ export default function OnboardingForm({
 
   useEffect(() => {
     if (!paymentDeadline || !isPaymentPending) {
-      setTimeLeftSeconds(0);
       return;
     }
     const updateTimer = () => {
@@ -130,9 +128,12 @@ export default function OnboardingForm({
     return () => clearInterval(timer);
   }, [subscriptionTxID, isPaymentPending]);
 
-  async function handleAction(formData: FormData) {
+  async function handleAction(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    const formData = new FormData(event.currentTarget);
 
     const normalizedSubdomain = sanitizeSubdomain(String(formData.get("subdomain") || ""));
     if (!SUBDOMAIN_REGEX.test(normalizedSubdomain)) {
@@ -142,13 +143,29 @@ export default function OnboardingForm({
     }
     formData.set("subdomain", normalizedSubdomain);
 
-    const result = await setupTenantAction(formData);
+    try {
+      const response = await fetch("/api/tenant/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          name: String(formData.get("name") || "").trim(),
+          subdomain: normalizedSubdomain,
+        }),
+      });
 
-    if (result?.error) {
-      setError(result.error);
-      setIsLoading(false);
-    } else {
+      const result = (await response.json().catch(() => null)) as { message?: string; error?: string } | null;
+
+      if (!response.ok) {
+        setError(result?.message || result?.error || "Gagal menyimpan data.");
+        setIsLoading(false);
+        return;
+      }
+
       window.location.href = "/dashboard";
+    } catch {
+      setError("Terjadi kesalahan jaringan.");
+      setIsLoading(false);
     }
   }
 
@@ -266,7 +283,7 @@ export default function OnboardingForm({
   }
 
   return (
-    <form action={handleAction} className="space-y-4 md:space-y-5">
+    <form onSubmit={handleAction} className="space-y-4 md:space-y-5">
       <PaymentModal
         open={isPaymentModalOpen}
         title="Pembayaran Langganan"
