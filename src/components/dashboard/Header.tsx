@@ -123,7 +123,7 @@ export default function Header({ account }: { account?: AccountProfileData }) {
             <Link href="/dashboard/account" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium transition-colors">
               <Settings className="w-4 h-4" /> Setup Profile
             </Link>
-            <Link href="/logout" className="flex items-center gap-2 px-4 py-2 text-sm text-rose-700 hover:bg-rose-50 font-medium transition-colors">
+            <Link href="/logout" prefetch={false} className="flex items-center gap-2 px-4 py-2 text-sm text-rose-700 hover:bg-rose-50 font-medium transition-colors">
               <LogOut className="w-4 h-4" /> Keluar
             </Link>
           </div>

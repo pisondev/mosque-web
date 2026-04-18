@@ -120,7 +120,7 @@ export default function Sidebar({
 
         {/* Area Logout */}
         <div className="p-3 border-t border-gray-100 flex-shrink-0 bg-white">
-          <Link href="/logout" title={!isOpen ? "Keluar Sistem" : undefined} className={`flex items-center text-rose-700 hover:bg-rose-50 rounded-lg font-medium transition-colors overflow-hidden ${isOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}`}>
+          <Link href="/logout" prefetch={false} title={!isOpen ? "Keluar Sistem" : undefined} className={`flex items-center text-rose-700 hover:bg-rose-50 rounded-lg font-medium transition-colors overflow-hidden ${isOpen ? "px-2.5 py-2" : "px-0 py-2 justify-center"}`}>
             <LogOut className={`w-5 h-5 flex-shrink-0 ${isOpen ? "mr-3" : "mr-0"}`} />
             <span className={`text-sm whitespace-nowrap transition-all duration-200 ${isOpen ? "opacity-100" : "opacity-0 hidden"}`}>Keluar Sistem</span>
           </Link>

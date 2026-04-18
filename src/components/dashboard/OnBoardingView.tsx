@@ -32,6 +32,7 @@ export default function OnboardingView({
         </div>
         <Link
           href="/logout"
+          prefetch={false}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors"
         >
           <LogOut className="w-3.5 h-3.5" /> Keluar

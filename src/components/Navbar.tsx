@@ -81,7 +81,7 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
 
           {isLoggedIn ? (
             <div className="flex items-center gap-4">
-              <Link href="/logout" className="text-sm font-bold text-gray-500 hover:text-rose-600 transition-colors">Logout</Link>
+              <Link href="/logout" prefetch={false} className="text-sm font-bold text-gray-500 hover:text-rose-600 transition-colors">Logout</Link>
               <Link href="/dashboard" className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-md shadow-emerald-500/20 active:scale-95">
                 Masuk Dasbor
               </Link>
@@ -118,7 +118,7 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn: boolean }) {
             {isLoggedIn ? (
               <>
                 <Link href="/dashboard" className="bg-emerald-600 text-white text-center px-5 py-3 rounded-xl font-bold">Masuk Dasbor</Link>
-                <Link href="/logout" className="text-center font-bold text-gray-500 py-2">Logout</Link>
+                <Link href="/logout" prefetch={false} className="text-center font-bold text-gray-500 py-2">Logout</Link>
               </>
             ) : (
               <Link href="/auth" className="bg-gray-900 text-white text-center px-5 py-3 rounded-xl font-bold">
