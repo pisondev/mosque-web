@@ -2,8 +2,9 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { getServerApiOrigin } from "@/lib/server-api";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const BASE_URL = getServerApiOrigin();
 const API_URL = `${BASE_URL}/api/v1`;
 
 async function getToken() {

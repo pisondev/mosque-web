@@ -6,8 +6,9 @@ import { upsertProfileAction } from "../../actions/profile";
 import { CopyToClipboard, ConfirmRedirect } from "../../../components/ui/InteractiveText";
 import { useToast } from "../../../components/ui/Toast";
 import { useDecisionModal } from "../../../components/ui/DecisionModalProvider";
+import CustomSelect from "@/components/ui/CustomSelect";
 import { getPublicPortalDisplay, getPublicPortalUrl } from "@/lib/public-portal";
-import { MapPin, Phone, Mail, Globe, Edit3, X, Save, Camera, ChevronDown, Building2 } from "lucide-react";
+import { MapPin, Phone, Mail, Globe, Edit3, X, Save, Camera, Building2 } from "lucide-react";
 import { uploadImageFile } from "../../../lib/upload";
 
 type ProfileInitialData = {
@@ -75,43 +76,6 @@ function initialToState(data: ProfileInitialData): ProfileFormData {
   };
 }
 
-// Dropdown komponen minimal (tidak menggunakan CustomSelect agar tidak ada ketergantungan hidden input)
-function NativeDropdown({
-  label,
-  options,
-  value,
-  onChange,
-  disabled,
-  placeholder,
-  loading,
-}: {
-  label: string;
-  options: string[];
-  value: string;
-  onChange: (val: string) => void;
-  disabled?: boolean;
-  placeholder?: string;
-  loading?: boolean;
-}) {
-  return (
-    <div className="relative w-full">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled || loading}
-        className={`w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-emerald-500 outline-none text-gray-900 bg-white disabled:bg-gray-100 shadow-sm appearance-none text-sm ${!value ? "text-gray-400" : ""}`}
-        aria-label={label}
-      >
-        {placeholder && <option value="">{loading ? "Memuat..." : placeholder}</option>}
-        {options.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-    </div>
-  );
-}
-
 export default function ProfileForm({ initialData }: { initialData: ProfileInitialData }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, setIsPending] = useState(false);
@@ -133,6 +97,25 @@ export default function ProfileForm({ initialData }: { initialData: ProfileIniti
   const { choose } = useDecisionModal();
 
   const currentKindLabel = KIND_OPTIONS.find((o) => o.value === initialData.kind)?.label || initialData.kind;
+  const provinceOptions = useMemo(
+    () => [
+      { label: isProvLoading ? "Memuat data provinsi..." : "-- Pilih Provinsi --", value: "" },
+      ...provinces.map((province) => ({ label: province, value: province })),
+    ],
+    [isProvLoading, provinces],
+  );
+  const cityOptions = useMemo(() => {
+    const placeholder = !formData.province
+      ? "-- Pilih provinsi dulu --"
+      : isCityLoading
+        ? "Memuat kabupaten/kota..."
+        : "-- Pilih Kabupaten/Kota --";
+
+    return [
+      { label: placeholder, value: "" },
+      ...cities.map((city) => ({ label: city, value: city })),
+    ];
+  }, [cities, formData.province, isCityLoading]);
 
   // Load provinsi saat masuk mode edit
   useEffect(() => {
@@ -174,6 +157,8 @@ export default function ProfileForm({ initialData }: { initialData: ProfileIniti
     if (isEditing && formData.province) {
       void loadCities(formData.province);
     }
+    // Intentionally only when edit mode opens to avoid refetch loop while typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]); // hanya saat edit dibuka
 
   const isDirty = useMemo(() => {
@@ -526,10 +511,11 @@ export default function ProfileForm({ initialData }: { initialData: ProfileIniti
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                   Jenis Tempat <span className="text-red-500">*</span>
                 </label>
-                <NativeDropdown
-                  label="Jenis Tempat"
-                  options={KIND_OPTIONS.map((o) => o.value)}
-                  value={formData.kind}
+                <CustomSelect
+                  key={`kind-${formData.kind}`}
+                  name="kind_display"
+                  options={KIND_OPTIONS}
+                  defaultValue={formData.kind}
                   onChange={(val) => setField("kind", val)}
                   disabled={isPending}
                 />
@@ -560,34 +546,26 @@ export default function ProfileForm({ initialData }: { initialData: ProfileIniti
                 {/* Provinsi */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Provinsi</label>
-                  <NativeDropdown
-                    label="Provinsi"
-                    options={provinces}
-                    value={formData.province}
+                  <CustomSelect
+                    key={`province-${formData.province}-${provinces.length}`}
+                    name="province_display"
+                    options={provinceOptions}
+                    defaultValue={formData.province}
                     onChange={handleProvinceChange}
-                    disabled={isPending}
-                    placeholder={isProvLoading ? "Memuat data provinsi..." : "-- Pilih Provinsi --"}
-                    loading={isProvLoading}
+                    disabled={isPending || isProvLoading}
                   />
                 </div>
 
                 {/* Kabupaten / Kota */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Kabupaten / Kota</label>
-                  <NativeDropdown
-                    label="Kabupaten / Kota"
-                    options={cities}
-                    value={formData.city}
+                  <CustomSelect
+                    key={`city-${formData.province}-${formData.city}-${cities.length}`}
+                    name="city_display"
+                    options={cityOptions}
+                    defaultValue={formData.city}
                     onChange={(val) => setField("city", val)}
-                    disabled={isPending || !formData.province}
-                    placeholder={
-                      !formData.province
-                        ? "-- Pilih provinsi dulu --"
-                        : isCityLoading
-                        ? "Memuat kabupaten/kota..."
-                        : "-- Pilih Kabupaten/Kota --"
-                    }
-                    loading={isCityLoading}
+                    disabled={isPending || !formData.province || isCityLoading}
                   />
                 </div>
 
