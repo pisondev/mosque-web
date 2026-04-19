@@ -309,6 +309,9 @@ export default function SubscriptionManager({ plans }: { plans: PlanItem[] }) {
         orderId={pendingTx?.order_id}
         amountLabel={pendingTx?.amount ? formatRupiah(Number(pendingTx.amount)) : undefined}
         onClose={() => setIsPaymentModalOpen(false)}
+        onPaymentReturn={() => {
+          void loadSubscriptionState();
+        }}
       />
       <div className="border-b border-gray-200 pb-5 flex items-center gap-3">
         <div className="bg-amber-100 p-2.5 rounded-lg text-amber-700 shadow-sm">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { getPublicPortalPatternExample, getSubdomainInputSuffix } from "@/lib/public-portal";
 import PaymentModal from "./ui/PaymentModal";
 
@@ -36,10 +37,53 @@ type ApiError = {
   error?: string;
 };
 
+type PaymentStatusMeta = {
+  label: string;
+  badgeClassName: string;
+  panelClassName: string;
+};
+
 const SUBDOMAIN_REGEX = /^[a-z-]{1,10}$/;
 
 function sanitizeSubdomain(value: string) {
   return value.toLowerCase().replace(/[^a-z-]/g, "").slice(0, 10);
+}
+
+function getPaymentStatusMeta(status: string): PaymentStatusMeta {
+  switch (status) {
+    case "paid":
+      return {
+        label: "Berhasil",
+        badgeClassName: "bg-emerald-100 text-emerald-800 border border-emerald-200",
+        panelClassName: "border-emerald-200 bg-emerald-50 text-emerald-900",
+      };
+    case "free":
+      return {
+        label: "Gratis Aktif",
+        badgeClassName: "bg-emerald-100 text-emerald-800 border border-emerald-200",
+        panelClassName: "border-emerald-200 bg-emerald-50 text-emerald-900",
+      };
+    case "expired":
+      return {
+        label: "Kedaluwarsa",
+        badgeClassName: "bg-amber-100 text-amber-800 border border-amber-200",
+        panelClassName: "border-amber-200 bg-amber-50 text-amber-900",
+      };
+    case "failed":
+    case "cancel":
+    case "deny":
+      return {
+        label: "Gagal / Batal",
+        badgeClassName: "bg-rose-100 text-rose-800 border border-rose-200",
+        panelClassName: "border-rose-200 bg-rose-50 text-rose-900",
+      };
+    default:
+      return {
+        label: "Menunggu Pembayaran",
+        badgeClassName: "bg-blue-100 text-blue-800 border border-blue-200",
+        panelClassName: "border-blue-200 bg-blue-50 text-blue-900",
+      };
+  }
 }
 
 export default function OnboardingForm({
@@ -73,6 +117,7 @@ export default function OnboardingForm({
     () => plans.find((p) => p.plan_code === selectedPlan) || null,
     [plans, selectedPlan]
   );
+  const paymentStatusMeta = getPaymentStatusMeta(subscriptionStatus);
 
   const formatRupiah = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
   const checkoutButtonLabel = selectedPlan === "free"
@@ -304,6 +349,11 @@ export default function OnboardingForm({
     setIsPaymentLoading(false);
   }
 
+  async function handlePaymentReturn() {
+    setIsPaymentModalOpen(false);
+    await handleCheckPaymentStatus();
+  }
+
   return (
     <form onSubmit={handleAction} className="space-y-4 md:space-y-5">
       <PaymentModal
@@ -313,6 +363,9 @@ export default function OnboardingForm({
         orderId={activeOrderID}
         amountLabel={activeAmount ? formatRupiah(activeAmount) : undefined}
         onClose={() => setIsPaymentModalOpen(false)}
+        onPaymentReturn={() => {
+          void handlePaymentReturn();
+        }}
       />
       {showStep1 && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
@@ -363,9 +416,12 @@ export default function OnboardingForm({
           </p>
           <p className="text-[11px] md:text-xs text-amber-700">Order ID: <span className="font-bold">{activeOrderID || "-"}</span></p>
           <p className="text-[11px] md:text-xs text-amber-700">Nominal: <span className="font-bold">{formatRupiah(activeAmount)}</span></p>
-          <p className="text-[11px] md:text-xs text-amber-700">
-            Status saat ini: <span className="font-bold uppercase">{subscriptionStatus}</span>
-          </p>
+          <div className="flex items-center gap-2 text-[11px] md:text-xs text-amber-800">
+            <span className="font-semibold">Status saat ini:</span>
+            <span className={`inline-flex items-center rounded-full px-2.5 py-1 font-bold ${paymentStatusMeta.badgeClassName}`}>
+              {paymentStatusMeta.label}
+            </span>
+          </div>
           <p className="text-[11px] md:text-xs text-amber-700">
             Batas bayar: <span className="font-bold">{timeLeftSeconds > 0 ? `${Math.floor(timeLeftSeconds / 60)
               .toString()
@@ -391,11 +447,11 @@ export default function OnboardingForm({
               {activePaymentURL && (
                 <button
                   type="button"
-                  onClick={() => window.open(activePaymentURL, "_blank", "noopener,noreferrer")}
+                  onClick={() => setIsPaymentModalOpen(true)}
                   disabled={isPaymentLoading}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold py-2.5 px-4 text-sm rounded-lg transition-colors"
                 >
-                  Buka Pembayaran
+                  Lanjutkan Pembayaran
                 </button>
               )}
               <button
@@ -420,8 +476,11 @@ export default function OnboardingForm({
       )}
 
       {isPaymentCompleted && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-          <p className="text-xs md:text-sm font-semibold text-emerald-800">
+        <div className={`rounded-lg p-3 flex items-start gap-3 border ${paymentStatusMeta.panelClassName}`}>
+          <div className="shrink-0 mt-0.5">
+            <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" />
+          </div>
+          <p className="text-xs md:text-sm font-semibold">
             {subscriptionStatus === "free"
               ? "Paket gratis aktif. Lanjutkan isi profil dan subdomain."
               : `Pembayaran paket terverifikasi (${subscriptionStatus}). Lanjutkan isi profil dan subdomain.`}
@@ -490,14 +549,20 @@ export default function OnboardingForm({
       )}
       {!isPaymentCompleted && (
         canRetryPayment ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
-            <p className="text-xs md:text-sm font-semibold text-rose-800">
-              Pembayaran sebelumnya berstatus <span className="uppercase">{subscriptionStatus}</span>. Pilih paket lalu buat transaksi baru untuk melanjutkan setup.
+          <div className={`rounded-lg p-3 flex items-start gap-3 border ${paymentStatusMeta.panelClassName}`}>
+            <div className="shrink-0 mt-0.5">
+              <XCircle className="w-4 h-4 md:w-5 md:h-5" />
+            </div>
+            <p className="text-xs md:text-sm font-semibold">
+              Pembayaran sebelumnya berstatus <span className="font-black">{paymentStatusMeta.label}</span>. Pilih paket lalu buat transaksi baru untuk melanjutkan setup.
             </p>
           </div>
         ) : (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-            <p className="text-xs md:text-sm font-semibold text-blue-800">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 flex items-start gap-3 text-blue-900">
+            <div className="shrink-0 mt-0.5">
+              <Clock3 className="w-4 h-4 md:w-5 md:h-5" />
+            </div>
+            <p className="text-xs md:text-sm font-semibold">
               Langkah 2 akan ditampilkan otomatis setelah paket aktif (paid/free).
             </p>
           </div>
